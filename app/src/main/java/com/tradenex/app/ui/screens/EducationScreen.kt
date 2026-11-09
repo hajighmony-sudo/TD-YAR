@@ -197,9 +197,11 @@ fun EducationScreen(nav: NavController) {
         visible.forEachIndexed { index, lesson ->
             Reveal(index + 1) {
                 LessonRow(lesson, onOpen = { selected = if (selected == lesson.id) null else lesson.id }, onQr = {
-                    runCatching {
+                    if (txPassword.isBlank()) {
+                        message = "برای ساخت QR رمزنگاری‌شده، ابتدا در بالای صفحه رمز تعیین کن."
+                    } else runCatching {
                         qrLesson = lesson
-                        qrBitmap = EducationQr.bitmap(EducationQr.encode(lesson))
+                        qrBitmap = EducationQr.bitmap(EducationQr.encode(lesson, txPassword))
                     }.onFailure { message = it.message ?: "ساخت QR ممکن نشد." }
                 }, onDelete = { EducationStore.delete(lesson.id); if (selected == lesson.id) selected = null })
                 if (selected == lesson.id) {
@@ -241,13 +243,13 @@ fun EducationScreen(nav: NavController) {
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Image(qrBitmap!!.asImageBitmap(), contentDescription = "QR code for lesson", modifier = Modifier.size(240.dp).clip(RoundedCornerShape(8.dp)))
-                    Text("این QR عنوان و متن‌های درس را منتقل می‌کند. فایل‌های عکس، ویدیو و PDF باید همراه QR از طریق اشتراک‌گذاری فایل ارسال شوند.", color = Tx.Muted, fontSize = 11.sp)
+                    Text("این QR عنوان و متن‌های درس را رمزنگاری‌شده منتقل می‌کند. فایل‌های عکس، ویدیو و PDF را با خروجی .tx و همین رمز ارسال کن؛ فایل‌ها داخل QR جا نمی‌شوند.", color = Tx.Muted, fontSize = 11.sp)
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     runCatching {
-                        val payload = EducationQr.encode(qrLesson!!)
+                        val payload = EducationQr.encode(qrLesson!!, txPassword)
                         val dir = File(context.cacheDir, "shared_qr").apply { mkdirs() }
                         val file = File(dir, "tradix_lesson_${qrLesson!!.id}.png")
                         file.outputStream().use { qrBitmap!!.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
