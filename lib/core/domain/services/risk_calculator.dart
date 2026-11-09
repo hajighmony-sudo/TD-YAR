@@ -19,20 +19,20 @@ class RiskCalculator {
     if (entryPrice <= 0 || stopPrice <= 0 || targetPrice <= 0 ||
         quantity <= 0 || accountBalance <= 0 ||
         trade.contractMultiplier <= 0) {
-      throw ArgumentError('Prices, quantity, balance and multiplier must be positive.');
+      throw ArgumentError(
+        'Prices, quantity, balance and multiplier must be positive.',
+      );
     }
-
     final stopDistance = trade.direction == TradeDirection.long
         ? entryPrice - stopPrice : stopPrice - entryPrice;
     final targetDistance = trade.direction == TradeDirection.long
         ? targetPrice - entryPrice : entryPrice - targetPrice;
     if (stopDistance <= 0) {
-      throw ArgumentError('Stop price must be beyond entry in the loss direction.');
+      throw ArgumentError('Stop price is not on the loss side of entry.');
     }
     if (targetDistance <= 0) {
-      throw ArgumentError('Target price must be beyond entry in the reward direction.');
+      throw ArgumentError('Target price is not on the reward side of entry.');
     }
-
     final risk = stopDistance * quantity * trade.contractMultiplier;
     final reward = targetDistance * quantity * trade.contractMultiplier;
     return TradeRiskRecord(
@@ -62,10 +62,10 @@ class RiskCalculator {
     if (plannedRiskAmount < 0 || realizedDailyLoss < 0 || tradesTakenToday < 0) {
       throw ArgumentError('Risk, loss and trade count cannot be negative.');
     }
-    final maxTradeRisk = profile.accountBalance *
-        profile.maxRiskPerTradePercent / 100;
-    final maxDailyLoss = profile.accountBalance *
-        profile.maxDailyLossPercent / 100;
+    final maxTradeRisk =
+        profile.accountBalance * profile.maxRiskPerTradePercent / 100;
+    final maxDailyLoss =
+        profile.accountBalance * profile.maxDailyLossPercent / 100;
     return RiskLimitCheck(
       plannedRiskWithinLimit: plannedRiskAmount <= maxTradeRisk,
       dailyLossWithinLimit: realizedDailyLoss < maxDailyLoss,
@@ -73,9 +73,9 @@ class RiskCalculator {
       maxTradeRiskAmount: maxTradeRisk,
       maxDailyLossAmount: maxDailyLoss,
       remainingDailyLossAllowance:
-          (maxDailyLoss - realizedDailyLoss).clamp(0, double.infinity),
-      remainingTradeSlots:
-          (profile.maxTradesPerDay - tradesTakenToday).clamp(0, profile.maxTradesPerDay),
+          (maxDailyLoss - realizedDailyLoss).clamp(0, double.infinity).toDouble(),
+      remainingTradeSlots: (profile.maxTradesPerDay - tradesTakenToday)
+          .clamp(0, profile.maxTradesPerDay).toInt(),
     );
   }
 }
