@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -51,13 +52,14 @@ fun NotificationCenterScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
                 Text("مرکز اعلان‌ها", style = MaterialTheme.typography.headlineSmall)
                 Text("${notifications.count { !it.read }} اعلان خوانده‌نشده", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = { NotificationInbox.markAllRead(context); refresh() }) {
-                Icon(Icons.Outlined.DoneAll, null)
-                Text("خواندن همه")
+            androidx.compose.material3.IconButton(onClick = { NotificationInbox.markAllRead(context); refresh() }) {
+                Icon(Icons.Outlined.DoneAll, contentDescription = "خواندن همه")
             }
-            TextButton(onClick = onSettings) { Text("تنظیمات") }
-            TextButton(onClick = { NotificationInbox.clear(context); refresh() }) {
-                Icon(Icons.Outlined.DeleteOutline, null)
+            androidx.compose.material3.IconButton(onClick = onSettings) {
+                Icon(Icons.Outlined.Settings, contentDescription = "تنظیمات اعلان‌ها")
+            }
+            androidx.compose.material3.IconButton(onClick = { NotificationInbox.clear(context); refresh() }) {
+                Icon(Icons.Outlined.DeleteOutline, contentDescription = "پاک‌کردن تاریخچه")
             }
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
