@@ -27,6 +27,18 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 30 * 60 * 1000L, pending)
             }
             "SHOW_SNOOZED" -> NexNotify.journalReminder(context)
+            "NEWS_REMINDER" -> {
+                val title = intent.getStringExtra("title").orEmpty()
+                val currency = intent.getStringExtra("currency").orEmpty()
+                NexNotify.show(
+                    context,
+                    NotifyCategory.REMINDER,
+                    "یادآوری خبر اقتصادی",
+                    listOf(currency, title).filter { it.isNotBlank() }.joinToString(" · "),
+                    "calendar",
+                    listOf("مشاهده تقویم" to "OPEN"),
+                )
+            }
             "OPEN" -> {
                 NotificationInbox.markRead(context, id)
                 val open = Intent(context, MainActivity::class.java).apply {
