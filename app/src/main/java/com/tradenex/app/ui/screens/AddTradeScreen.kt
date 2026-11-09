@@ -380,41 +380,55 @@ fun AddTradeScreen(nav: NavController) {
             TxField(notesText, { notesText = it }, "یادداشت معامله (اختیاری)")
             if (parsedTradeDate == null) Text("تاریخ باید با قالب YYYY-MM-DD وارد شود.", color = Tx.Red, fontSize = 11.sp)
             if (parsedTradeTime == null) Text("ساعت باید با قالب HH:mm وارد شود.", color = Tx.Red, fontSize = 11.sp)
+            if (saveMessage.isNotBlank()) Text(saveMessage, color = Tx.Red, fontSize = 11.sp)
             GoldButton("ذخیره معامله در دفترچه") {
-                if (symbol.isNotBlank() && parsedTradeDate != null && parsedTradeTime != null && (!usePriceCalculation || priceResult != null)) {
-                    AppState.addTrade(
-                    Trade(
-                        id = System.currentTimeMillis(),
-                        symbol = symbol,
-                        buy = buy,
-                        lot = lot,
-                        pnl = signed,
-                        strategy = strategy,
-                        strategyVersion = AppState.strategies.firstOrNull { it.name == strategy }?.version ?: 1,
-                        tags = tags.toList(),
-                        epochDay = parsedTradeDate.toEpochDay(),
-                        emotion = emotion,
-                        accountId = AppState.selectedAccountId,
-                        openedAtMillis = parsedTradeDate.atTime(parsedTradeTime).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                        closedAtMillis = parsedTradeDate.atTime(23, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                        entryPrice = entryText.trim().toDoubleOrNull(),
-                        exitPrice = exitText.trim().toDoubleOrNull(),
-                        commission = commissionText.trim().toDoubleOrNull() ?: 0.0,
-                        swap = swapText.trim().toDoubleOrNull() ?: 0.0,
-                        otherFees = feeText.trim().toDoubleOrNull() ?: 0.0,
-                        stopLossPrice = stopLossText.trim().toDoubleOrNull(),
-                        takeProfitPrice = takeProfitText.trim().toDoubleOrNull(),
-                        notes = notesText.trim(),
-                        plannedRisk = plannedRiskText.trim().toDoubleOrNull(),
-                        timeframe = timeframe,
-                        marketCondition = marketCondition,
-                        strategyFollowed = strategyFollowed,
-                        tradeName = tradeNameText.trim(),
-                    ),
-                    )
-                    NexNotify.tradeLogged(context, symbol)
-                    if (settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    nav.popBackStack()
+                when {
+                    AppState.accounts.none { !it.archived } -> saveMessage = "ابتدا حساب معاملاتی خودت را ایجاد کن."
+                    symbol.isBlank() -> saveMessage = "نماد یا نام دارایی را وارد کن."
+                    lot <= 0.0 || !lot.isFinite() -> saveMessage = "حجم معامله را وارد کن."
+                    parsedTradeDate == null -> saveMessage = "تاریخ معامله معتبر نیست."
+                    parsedTradeTime == null -> saveMessage = "ساعت معامله معتبر نیست."
+                    usePriceCalculation && priceResult == null -> saveMessage = "قیمت ورود، خروج و نرخ تبدیل را کامل و معتبر وارد کن."
+                    !usePriceCalculation && (!resultChosen || amount <= 0.0) -> saveMessage = "نوع نتیجه و مبلغ سود یا ضرر را مشخص کن."
+                    else -> {
+                        val saved = runCatching {
+                            AppState.addTrade(
+                                Trade(
+                                    id = System.currentTimeMillis(),
+                                    symbol = symbol,
+                                    buy = buy,
+                                    lot = lot,
+                                    pnl = signed,
+                                    strategy = strategy,
+                                    strategyVersion = AppState.strategies.firstOrNull { it.name == strategy }?.version ?: 1,
+                                    tags = tags.toList(),
+                                    epochDay = parsedTradeDate.toEpochDay(),
+                                    emotion = emotion,
+                                    accountId = AppState.selectedAccountId,
+                                    openedAtMillis = parsedTradeDate.atTime(parsedTradeTime).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                                    closedAtMillis = parsedTradeDate.atTime(23, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                                    entryPrice = entryText.trim().toDoubleOrNull(),
+                                    exitPrice = exitText.trim().toDoubleOrNull(),
+                                    commission = commissionText.trim().toDoubleOrNull() ?: 0.0,
+                                    swap = swapText.trim().toDoubleOrNull() ?: 0.0,
+                                    otherFees = feeText.trim().toDoubleOrNull() ?: 0.0,
+                                    stopLossPrice = stopLossText.trim().toDoubleOrNull(),
+                                    takeProfitPrice = takeProfitText.trim().toDoubleOrNull(),
+                                    notes = notesText.trim(),
+                                    plannedRisk = plannedRiskText.trim().toDoubleOrNull(),
+                                    timeframe = timeframe,
+                                    marketCondition = marketCondition,
+                                    strategyFollowed = strategyFollowed,
+                                    tradeName = tradeNameText.trim(),
+                                ),
+                            )
+                        }
+                        saved.onSuccess {
+                            NexNotify.tradeLogged(context, symbol)
+                            if (settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            nav.popBackStack()
+                        }.onFailure { saveMessage = it.message ?: "ثبت معامله انجام نشد." }
+                    }
                 }
             }
         }
