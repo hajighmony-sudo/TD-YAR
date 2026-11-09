@@ -30,6 +30,7 @@ void main() {
       entry(
         id: 'j1', date: base, plan: 'Plan A',
         tags: const ['discipline', 'review'], trades: const ['t1'],
+        
       ),
       entry(
         id: 'j2', date: base.add(const Duration(hours: 3)),
