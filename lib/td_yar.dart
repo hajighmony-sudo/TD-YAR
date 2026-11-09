@@ -42,3 +42,12 @@ export 'core/domain/services/risk_management_service.dart';
 export 'core/domain/services/trade_calculator.dart';
 export 'core/domain/services/trading_calendar.dart';
 export 'core/domain/services/trading_calendar_service.dart';
+
+export 'core/data/repositories/learning_repository.dart';
+export 'core/data/repositories/sqlite_learning_repository.dart';
+export 'core/data/repositories/app_infrastructure_repository.dart';
+export 'core/data/repositories/sqlite_app_infrastructure_repository.dart';
+export 'core/domain/models/learning_resource.dart';
+export 'core/domain/services/learning_library_service.dart';
+export 'core/domain/services/report_export_service.dart';
+export 'core/domain/services/database_backup_service.dart';
