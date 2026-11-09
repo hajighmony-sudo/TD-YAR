@@ -36,7 +36,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val currency = intent.getStringExtra("currency").orEmpty()
                 NexNotify.show(
                     context,
-                    NotifyCategory.REMINDER,
+                    NotifyCategory.NEWS,
                     "یادآوری خبر اقتصادی",
                     listOf(currency, title).filter { it.isNotBlank() }.joinToString(" · "),
                     "calendar",
