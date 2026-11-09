@@ -40,7 +40,10 @@ class RiskCalculator {
     }
     final risk = stopDistance * quantity * trade.contractMultiplier;
     final reward = targetDistance * quantity * trade.contractMultiplier;
-    if (!risk.isFinite || !reward.isFinite) {
+    final ratio = reward / risk;
+    final riskPercent = risk / accountBalance * 100;
+    if (!risk.isFinite || !reward.isFinite ||
+        !ratio.isFinite || !riskPercent.isFinite) {
       throw ArgumentError('Calculated risk/reward exceeds numeric range.');
     }
     return TradeRiskRecord(
@@ -54,8 +57,8 @@ class RiskCalculator {
       accountBalanceSnapshot: accountBalance,
       plannedRiskAmount: risk,
       plannedRewardAmount: reward,
-      riskRewardRatio: reward / risk,
-      riskPercent: risk / accountBalance * 100,
+      riskRewardRatio: ratio,
+      riskPercent: riskPercent,
       notes: notes,
       createdAt: createdAt ?? DateTime.now(),
     );
