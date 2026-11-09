@@ -6,7 +6,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'td_yar.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   Database? _database;
 
@@ -43,7 +43,7 @@ class AppDatabase {
         quantity REAL NOT NULL CHECK (quantity > 0),
         price REAL NOT NULL CHECK (price > 0),
         fee REAL NOT NULL DEFAULT 0 CHECK (fee >= 0),
-        executed_at TEXT NOT NULL,
+        executed_at TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE
       )
     ''');
@@ -80,6 +80,11 @@ class AppDatabase {
       await _createAdvancedTables(db);
     }
     if (oldVersion < 3) await _createIndexes(db);
+    if (oldVersion < 4) {
+      await db.execute(
+        "ALTER TABLE trade_executions ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   Future<void> _createAdvancedTables(Database db) async {
@@ -154,6 +159,9 @@ class AppDatabase {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_trades_strategy ON trades(strategy_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_trades_account_created ON trades(account_label, created_at)',
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date)',
