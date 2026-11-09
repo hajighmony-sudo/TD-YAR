@@ -74,6 +74,8 @@ import java.io.File
 fun EducationScreen(nav: NavController) {
     val context = LocalContext.current
     var filter by remember { mutableStateOf("همه") }
+    var searchQuery by remember { mutableStateOf("") }
+    var favoritesOnly by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Long?>(null) }
@@ -145,7 +147,7 @@ fun EducationScreen(nav: NavController) {
 
     val categories = listOf("همه", "متن", "عکس", "ویدیو", "فایل")
     val visible = EducationStore.lessons.filter { lesson ->
-        filter == "همه" || lesson.blocks.any { block ->
+        val matchesType = filter == "همه" || lesson.blocks.any { block ->
             when (filter) {
                 "متن" -> block.type == EducationBlockType.TEXT
                 "عکس" -> block.type == EducationBlockType.IMAGE
@@ -153,6 +155,11 @@ fun EducationScreen(nav: NavController) {
                 else -> block.type == EducationBlockType.FILE
             }
         }
+        val matchesSearch = searchQuery.isBlank() ||
+            lesson.title.contains(searchQuery, ignoreCase = true) ||
+            lesson.category.contains(searchQuery, ignoreCase = true) ||
+            lesson.tags.any { it.contains(searchQuery, ignoreCase = true) }
+        matchesType && matchesSearch && (!favoritesOnly || lesson.favorite)
     }
 
     Page(title = "آموزش و دانش", onBack = { nav.popBackStack() }) {
@@ -160,8 +167,10 @@ fun EducationScreen(nav: NavController) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionTitle("کتابخانه آموزشی", "درس‌ها، فایل‌ها و یادداشت‌های شخصی")
+                    TxField(searchQuery, { searchQuery = it }, "جست‌وجوی عنوان، دسته یا برچسب")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         categories.forEach { TxChip(it, filter == it, { filter = it }) }
+                        TxChip("★ محبوب‌ها", favoritesOnly, { favoritesOnly = !favoritesOnly })
                     }
                     Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): همه‌ی درس‌ها و فایل‌هایشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. رمز اختیاری است ولی امنیت واقعی را همان می‌دهد.", color = Tx.Muted, fontSize = 10.sp)
                     TxField(txPassword, { txPassword = it }, "رمز بسته (اختیاری)")
@@ -273,7 +282,10 @@ private fun LessonRow(lesson: EducationLesson, onOpen: () -> Unit, onQr: () -> U
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(lesson.title, color = Tx.Text, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-                    Text("${lesson.blocks.size} بخش آموزشی · ${lesson.blocks.count { it.type == EducationBlockType.TEXT }} متن", color = Tx.Muted, fontSize = 10.sp)
+                    Text("${lesson.category} · ${lesson.blocks.size} بخش آموزشی · ${lesson.blocks.count { it.type == EducationBlockType.TEXT }} متن", color = Tx.Muted, fontSize = 10.sp)
+                    if (lesson.tags.isNotEmpty() || lesson.favorite) {
+                        Text((if (lesson.favorite) "★ محبوب  " else "") + lesson.tags.joinToString(" · "), color = Tx.Gold, fontSize = 9.sp, maxLines = 1)
+                    }
                 }
                 IconBox(Icons.Rounded.QrCode2, "ساخت و اشتراک QR", onQr)
                 IconBox(Icons.Rounded.Delete, "حذف درس", onDelete)
@@ -288,9 +300,35 @@ private fun LessonRow(lesson: EducationLesson, onOpen: () -> Unit, onQr: () -> U
 @Composable
 private fun LessonEditor(lesson: EducationLesson, context: android.content.Context, onRemove: (Long) -> Unit, onText: (String) -> Unit, onPick: () -> Unit, onProgress: (Float) -> Unit) {
     var text by remember(lesson.id, lesson.blocks.size) { mutableStateOf("") }
+    var category by remember(lesson.id) { mutableStateOf(lesson.category) }
+    var tags by remember(lesson.id) { mutableStateOf(lesson.tags.joinToString(", ")) }
+    var favorite by remember(lesson.id) { mutableStateOf(lesson.favorite) }
+    var linkedStrategyId by remember(lesson.id) { mutableStateOf(lesson.linkedStrategyId) }
     GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionTitle("محتوای مبحث", "ترتیب متن و فایل‌ها حفظ می‌شود")
+            Text("دسته‌بندی درس", color = Tx.Muted, fontSize = 11.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                listOf("عمومی", "فارکس", "تحلیل تکنیکال", "استراتژی", "روان‌شناسی", "مدیریت ریسک").forEach {
+                    TxChip(it, category == it, { category = it })
+                }
+            }
+            TxField(tags, { tags = it }, "برچسب‌ها را با کاما جدا کن")
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TxChip(if (favorite) "★ در محبوب‌ها" else "☆ افزودن به محبوب‌ها", favorite, { favorite = !favorite })
+            }
+            if (AppState.strategies.isNotEmpty()) {
+                Text("اتصال به استراتژی", color = Tx.Muted, fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TxChip("بدون لینک", linkedStrategyId == null, { linkedStrategyId = null })
+                    AppState.strategies.forEach { strategy ->
+                        TxChip(strategy.name, linkedStrategyId == strategy.id, { linkedStrategyId = strategy.id })
+                    }
+                }
+            }
+            TextButton(onClick = {
+                EducationStore.updateMeta(lesson.id, category, tags.split(",").map(String::trim), favorite, linkedStrategyId)
+            }) { Text("ذخیره مشخصات درس", color = Tx.Gold) }
             lesson.blocks.forEach { block ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.035f))
                     .clickable(enabled = block.uri.isNotBlank()) {
