@@ -60,6 +60,17 @@ fun TradesScreen(nav: NavController) {
     var tradeNameText by remember { mutableStateOf("") }
     var complianceEdit by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val msg = runCatching {
+                val text = context.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) }
+                val parsed = com.tradenex.app.data.TradeCsv.parse(text, AppState.selectedAccount.id)
+                val added = AppState.addTrades(parsed.trades)
+                "$added معامله وارد شد" + if (parsed.skipped > 0) " (${parsed.skipped} ردیف نامعتبر یا غیرمعامله رد شد)" else ""
+            }.getOrElse { "ورود CSV ممکن نشد: ${it.message}" }
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
             runCatching {
@@ -109,7 +120,8 @@ fun TradesScreen(nav: NavController) {
                 Text(Analytics.money(shown.sumOf { it.pnl }), color = if (shown.sumOf { it.pnl } >= 0) Tx.Green else Tx.Red, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { exportLauncher.launch("tradix-trades.csv") }) { Text("CSV", color = Tx.Gold) }
+                TextButton(onClick = { importLauncher.launch(arrayOf("text/*", "application/vnd.ms-excel", "*/*")) }) { Text("ورود CSV", color = Tx.Gold) }
+                TextButton(onClick = { exportLauncher.launch("tradix-trades.csv") }) { Text("خروجی CSV", color = Tx.Gold) }
                 GoldButton("ثبت معامله جدید") { nav.navigate("add") }
             }
         }

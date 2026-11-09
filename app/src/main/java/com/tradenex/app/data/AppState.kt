@@ -142,6 +142,15 @@ object AppState {
 
     fun stats(): TradeStats = NativeCore.stats(visibleTrades.map { it.pnl }.toDoubleArray())
 
+    /** Bulk add (CSV import): one persist for the whole batch. Invalid rows are skipped; returns how many were added. */
+    fun addTrades(list: List<Trade>): Int {
+        val ok = list.filter { it.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}")) && it.lot > 0.0 && it.pnl.isFinite() }
+        if (ok.isEmpty()) return 0
+        trades.addAll(ok)
+        persist()
+        return ok.size
+    }
+
     fun addTrade(t: Trade) {
         require(t.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}"))) {
             "Trade symbol must contain 1-24 letters, digits, dots, underscores, slashes or hyphens."
