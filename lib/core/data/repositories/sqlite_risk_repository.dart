@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/models/risk_profile.dart';
+import '../../domain/models/trade.dart';
 import '../../domain/models/trade_risk_record.dart';
 import '../../domain/services/risk_calculator.dart';
 import '../local/app_database.dart';
@@ -17,8 +18,7 @@ class SqliteRiskRepository implements RiskRepository {
   Future<void> saveProfile(RiskProfile profile) async {
     RiskCalculator.validateProfile(profile);
     await (await _db).insert(
-      'risk_profiles',
-      profile.toMap(),
+      'risk_profiles', profile.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -48,40 +48,41 @@ class SqliteRiskRepository implements RiskRepository {
 
   @override
   Future<void> saveTradeRisk(TradeRiskRecord record) async {
-    _validateTradeRisk(record);
-    await (await _db).insert(
-      'trade_risk_records',
-      record.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  void _validateTradeRisk(TradeRiskRecord record) {
-    final values = [
-      record.entryPrice, record.stopPrice, record.targetPrice, record.quantity,
-      record.contractMultiplier, record.accountBalanceSnapshot,
-      record.plannedRiskAmount, record.plannedRewardAmount,
-      record.riskRewardRatio, record.riskPercent,
-    ];
-    if (record.id.trim().isEmpty || record.tradeId.trim().isEmpty ||
-        values.any((value) => !value.isFinite || value <= 0)) {
-      throw ArgumentError('Trade risk record contains invalid values.');
-    }
-    final risk = (record.entryPrice - record.stopPrice).abs() *
-        record.quantity * record.contractMultiplier;
-    final reward = (record.targetPrice - record.entryPrice).abs() *
-        record.quantity * record.contractMultiplier;
-    final tolerance = 1e-8;
-    if ((risk - record.plannedRiskAmount).abs() >
-            tolerance * (1 + risk) ||
-        (reward - record.plannedRewardAmount).abs() >
-            tolerance * (1 + reward) ||
-        (reward / risk - record.riskRewardRatio).abs() >
-            tolerance * (1 + record.riskRewardRatio) ||
-        (risk / record.accountBalanceSnapshot * 100 - record.riskPercent).abs() >
-            tolerance * (1 + record.riskPercent)) {
-      throw ArgumentError('Trade risk record calculations are inconsistent.');
-    }
+    final db = await _db;
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'trades', where: 'id = ?', whereArgs: [record.tradeId], limit: 1,
+      );
+      if (rows.isEmpty) throw StateError('Trade not found: ${record.tradeId}');
+      final trade = Trade.fromMap(rows.first);
+      final expected = RiskCalculator.createTradeRiskRecord(
+        id: record.id,
+        trade: trade,
+        entryPrice: record.entryPrice,
+        stopPrice: record.stopPrice,
+        targetPrice: record.targetPrice,
+        quantity: record.quantity,
+        accountBalance: record.accountBalanceSnapshot,
+        notes: record.notes,
+        createdAt: record.createdAt,
+      );
+      const tolerance = 1e-8;
+      if ((expected.plannedRiskAmount - record.plannedRiskAmount).abs() >
+              tolerance * (1 + expected.plannedRiskAmount) ||
+          (expected.plannedRewardAmount - record.plannedRewardAmount).abs() >
+              tolerance * (1 + expected.plannedRewardAmount) ||
+          (expected.riskRewardRatio - record.riskRewardRatio).abs() >
+              tolerance * (1 + expected.riskRewardRatio) ||
+          (expected.riskPercent - record.riskPercent).abs() >
+              tolerance * (1 + expected.riskPercent) ||
+          expected.contractMultiplier != record.contractMultiplier) {
+        throw ArgumentError('Trade risk record calculations are inconsistent.');
+      }
+      await txn.insert(
+        'trade_risk_records', record.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   @override
