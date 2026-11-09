@@ -1,5 +1,6 @@
 import '../../data/repositories/trade_repository.dart';
 import '../models/performance_report.dart';
+import '../models/trade_execution.dart';
 import 'performance_analytics.dart';
 
 class PerformanceAnalyticsService {
@@ -21,15 +22,13 @@ class PerformanceAnalyticsService {
     final executions = await Future.wait(
       trades.map((trade) => _tradeRepository.getExecutions(trade.id)),
     );
-    final byTrade = <String, List<dynamic>>{};
+    final byTrade = <String, List<TradeExecution>>{};
     for (var index = 0; index < trades.length; index++) {
       byTrade[trades[index].id] = executions[index];
     }
     return _analytics.analyze(
       trades: trades,
-      executionsByTrade: byTrade.map(
-        (key, value) => MapEntry(key, value.cast()),
-      ),
+      executionsByTrade: byTrade,
       from: from,
       to: to,
     );
