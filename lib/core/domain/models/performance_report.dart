@@ -107,6 +107,6 @@ class PerformanceReport {
       outcomes.where((item) => item.netPnl < 0).fold<double>(
         0, (sum, item) => sum + item.netPnl.abs(),
       );
-  double get recoveryFactor =>
-      maxDrawdown == 0 ? (netPnl > 0 ? double.infinity : 0) : netPnl / maxDrawdown;
+  double? get recoveryFactor =>
+      maxDrawdown == 0 ? null : netPnl / maxDrawdown;
 }
