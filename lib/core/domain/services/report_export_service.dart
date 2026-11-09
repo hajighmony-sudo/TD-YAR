@@ -14,6 +14,7 @@ import '../../data/repositories/strategy_repository.dart';
 import '../../data/repositories/trading_session_repository.dart';
 import '../../data/repositories/trade_repository.dart';
 import '../models/performance_report.dart';
+import '../models/trade.dart';
 import 'performance_analytics_service.dart';
 
 /// Exports manually recorded data. Optional repositories keep this service
@@ -55,9 +56,9 @@ class ReportExportService {
   final PlaybookRepository? _playbooks;
   final AppDatabase? _database;
 
-  Future<String> exportJson({DateTime? from, DateTime? to}) async {
+  Future<String> exportJson({DateTime? from, DateTime? to, String? accountId, String? strategyId}) async {
     _validate(from, to);
-    final allTrades = await _trades.getTrades();
+    final allTrades = await _trades.getTrades(accountId: accountId, strategyId: strategyId);
     final selectedTrades = <Map<String, Object?>>[];
     final selectedTradeIds = <String>{};
     for (final trade in allTrades) {
@@ -80,13 +81,13 @@ class ReportExportService {
     final strategies = await _strategies.getAll(includeArchived: true);
     final playbooks = _playbooks == null
         ? <Map<String, Object?>>[]
-        : (await _playbooks!.getPlaybooks()).map((item) => item.toMap()).toList();
+        : (await _playbooks.getPlaybooks()).map((item) => item.toMap()).toList();
     final attachments = _database == null
         ? <Map<String, Object?>>[]
-        : (await (await _database!.database).query('attachments'))
+        : (await (await _database.database).query('attachments'))
             .map((row) => Map<String, Object?>.from(row))
             .toList();
-    final report = await _performance.buildReport(from: from, to: to);
+    final report = await _performance.buildReport(from: from, to: to, accountId: accountId, strategyId: strategyId);
     final psychology = _psychology == null
         ? <Map<String, Object?>>[]
         : (await _psychology.getEntries(from: from, to: to))
@@ -170,9 +171,9 @@ class ReportExportService {
     });
   }
 
-  Future<Uint8List> exportPdf({DateTime? from, DateTime? to}) async {
+  Future<Uint8List> exportPdf({DateTime? from, DateTime? to, String? accountId, String? strategyId, TradeDirection? direction}) async {
     _validate(from, to);
-    final report = await _performance.buildReport(from: from, to: to);
+    final report = await _performance.buildReport(from: from, to: to, accountId: accountId, strategyId: strategyId, direction: direction);
     final document = pw.Document();
     final rows = <List<String>>[
       ['Metric', 'Value'],
@@ -209,9 +210,12 @@ class ReportExportService {
   Future<String> exportRealizationsCsv({
     DateTime? from,
     DateTime? to,
+    String? accountId,
+    String? strategyId,
+    TradeDirection? direction,
   }) async {
     _validate(from, to);
-    final report = await _performance.buildReport(from: from, to: to);
+    final report = await _performance.buildReport(from: from, to: to, accountId: accountId, strategyId: strategyId, direction: direction);
     final rows = <List<Object?>>[
       [
         'trade_id', 'execution_id', 'symbol', 'direction', 'strategy_id',
