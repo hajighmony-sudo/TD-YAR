@@ -101,7 +101,7 @@ object EducationStore {
         if (index < 0) return
         lessons[index] = lessons[index].copy(
             category = category.trim().ifBlank { "عمومی" },
-            tags = tags.map(String::trim).filter(String::isNotBlank).distinct().take(20),
+            tags = tags.map { it.trim() }.filter(String::isNotBlank).distinct().take(20),
             favorite = favorite,
             linkedStrategyId = linkedStrategyId,
         )
