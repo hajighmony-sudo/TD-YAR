@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,6 +82,7 @@ private fun stepLot(v: Double, dir: Int): Double {
 fun AddTradeScreen(nav: NavController) {
     val settings = AppState.settings
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     var buy by remember { mutableStateOf(true) }
     var symbol by remember { mutableStateOf("EURUSD") }
     var lot by remember { mutableStateOf(settings.defaultLot) }
