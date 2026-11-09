@@ -12,7 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
+import java.io.InputStream
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.zip.GZIPInputStream
