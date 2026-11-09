@@ -9,6 +9,7 @@ class TradeExecution {
     required this.price,
     required this.executedAt,
     this.fee = 0,
+    this.notes = '',
   });
 
   final String id;
@@ -18,6 +19,7 @@ class TradeExecution {
   final double price;
   final double fee;
   final DateTime executedAt;
+  final String notes;
 
   Map<String, Object?> toMap() => {
         'id': id,
@@ -27,6 +29,7 @@ class TradeExecution {
         'price': price,
         'fee': fee,
         'executed_at': executedAt.toUtc().toIso8601String(),
+        'notes': notes,
       };
 
   factory TradeExecution.fromMap(Map<String, Object?> map) => TradeExecution(
@@ -37,5 +40,6 @@ class TradeExecution {
         price: (map['price'] as num).toDouble(),
         fee: (map['fee'] as num?)?.toDouble() ?? 0,
         executedAt: DateTime.parse(map['executed_at'] as String).toLocal(),
+        notes: map['notes'] as String? ?? '',
       );
 }
