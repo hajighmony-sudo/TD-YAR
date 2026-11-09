@@ -58,8 +58,8 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 - PDF export summarizes historical performance metrics.
 - Versioned JSON archive export covers trades with complete fill histories, daily journal, strategies, playbooks, attachment metadata, psychology entries, risk profiles and trade-risk records, learning resources, session definitions, accounts, settings, audit events and a performance snapshot.
 - Optional repository dependencies are reported in the archive manifest so a caller can identify omitted modules.
-- SQLite backup validates database integrity, schema version and required tables. Restore stages a candidate file and keeps a rollback copy until the restored database opens successfully.
-- JSON archive import validates the format and model relationships, then inserts all supported rows in a single SQLite transaction. Duplicate IDs and constraint failures abort the import without overwriting existing data.
+- SQLite backup checkpoints WAL, copies to a staging file, validates integrity/schema/required tables, and only then replaces the destination while preserving its previous copy. Restore stages a candidate file and keeps a rollback copy until the restored database opens successfully. Backup/restore is an exclusive operation; pause repository writes while it runs.
+- JSON archive import validates the format and model relationships, then inserts all supported rows in a single SQLite transaction. Duplicate IDs and constraint failures abort the import without overwriting existing data. Filtered exports remove links to trades omitted by the selected date/account/strategy filters.
 - Binary media files are referenced by local path and are not embedded in JSON exports; paths may not resolve on another device. Cloud synchronization is not included.
 
 ### 11. Core infrastructure
@@ -78,7 +78,7 @@ Migrations preserve existing trade/journal data and add feature tables/indexes i
 
 ## Validation
 
-`TdYarServices` is the composition root: construct it once and inject its repositories/services into the presentation layer. All SQLite repositories share the same `AppDatabase` instance.
+`TdYarServices` is the composition root: construct it once, call `initialize()` during app startup, inject its repositories/services into the presentation layer, and call `close()` during shutdown. All SQLite repositories share the same `AppDatabase` instance. Concurrent first access is single-flight so callers share one opening connection. SQLite foreign keys and WAL mode are configured on every open.
 
 Run:
 
@@ -88,4 +88,4 @@ flutter analyze
 flutter test
 ```
 
-Do not mark a build as verified until these commands have been run in a Flutter-enabled environment.
+GitHub Actions runs these commands on pull requests and pushes. SQLite integration tests use `sqflite_common_ffi` so database behavior can be exercised on CI without a device emulator.
