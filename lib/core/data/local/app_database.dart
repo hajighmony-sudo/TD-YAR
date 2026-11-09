@@ -165,6 +165,7 @@ class AppDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_trades_account_id_created ON trades(account_id, created_at)',
     );
+    await _createAuditTriggers(db);
   }
 
   Future<void> _createFoundationTables(Database db) async {
@@ -176,6 +177,7 @@ class AppDatabase {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_updated ON learning_resources(updated_at)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_category ON learning_resources(category)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_events(occurred_at)');
+    await _createAuditTriggers(db);
   }
 
   Future<void> _createAdvancedTables(Database db) async {
@@ -258,6 +260,64 @@ class AppDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_trading_sessions_enabled ON trading_sessions(is_enabled)',
     );
+  }
+
+  Future<void> _createAuditTriggers(Database db) async {
+    const auditedTables = <Map<String, String>>[
+      {'table': 'trades', 'entity': 'trade', 'key': 'id'},
+      {'table': 'trade_executions', 'entity': 'trade_execution', 'key': 'id'},
+      {'table': 'journal_entries', 'entity': 'journal_entry', 'key': 'id'},
+      {'table': 'strategies', 'entity': 'strategy', 'key': 'id'},
+      {'table': 'playbooks', 'entity': 'playbook', 'key': 'id'},
+      {'table': 'psychology_entries', 'entity': 'psychology_entry', 'key': 'id'},
+      {'table': 'risk_profiles', 'entity': 'risk_profile', 'key': 'id'},
+      {'table': 'trade_risk_records', 'entity': 'trade_risk_record', 'key': 'id'},
+      {'table': 'trading_sessions', 'entity': 'trading_session', 'key': 'id'},
+      {'table': 'learning_resources', 'entity': 'learning_resource', 'key': 'id'},
+      {'table': 'trading_accounts', 'entity': 'trading_account', 'key': 'id'},
+      {'table': 'app_settings', 'entity': 'app_setting', 'key': 'key'},
+    ];
+
+    for (final spec in auditedTables) {
+      final table = spec['table']!;
+      final entity = spec['entity']!;
+      final key = spec['key']!;
+      for (final operation in ['insert', 'update', 'delete']) {
+        final trigger = 'audit_${table}_${operation}';
+        final row = operation == 'delete' ? 'OLD' : 'NEW';
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS $trigger
+          AFTER ${operation.toUpperCase()} ON $table
+          BEGIN
+            INSERT INTO audit_events
+              (id, event_type, entity_type, entity_id, details_json, occurred_at)
+            VALUES (
+              lower(hex(randomblob(16))),
+              '$operation',
+              '$entity',
+              CAST($row.$key AS TEXT),
+              '{}',
+              strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+            );
+          END
+        ''');
+      }
+    }
+
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS audit_events_no_update
+      BEFORE UPDATE ON audit_events
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_events are append-only');
+      END
+    ''');
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS audit_events_no_delete
+      BEFORE DELETE ON audit_events
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_events are append-only');
+      END
+    ''');
   }
 
   Future<void> _createIndexes(Database db) async {
