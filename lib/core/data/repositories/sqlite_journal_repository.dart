@@ -9,11 +9,23 @@ class SqliteJournalRepository implements JournalRepository {
       : _appDatabase = appDatabase ?? AppDatabase.instance;
 
   final AppDatabase _appDatabase;
-
   Future<Database> get _db => _appDatabase.database;
+
+  static void _validate(JournalEntry entry) {
+    if (entry.id.trim().isEmpty) {
+      throw ArgumentError('Journal entry id is required.');
+    }
+    final collections = [
+      entry.goals, entry.tags, entry.linkedTradeIds,
+    ];
+    if (collections.any((items) => items.any((item) => item.trim().isEmpty))) {
+      throw ArgumentError('Journal goals, tags and trade links cannot be empty.');
+    }
+  }
 
   @override
   Future<void> createEntry(JournalEntry entry) async {
+    _validate(entry);
     await (await _db).insert(
       'journal_entries',
       entry.toMap(),
@@ -23,6 +35,7 @@ class SqliteJournalRepository implements JournalRepository {
 
   @override
   Future<void> updateEntry(JournalEntry entry) async {
+    _validate(entry);
     final changed = await (await _db).update(
       'journal_entries',
       entry.toMap(),
@@ -42,8 +55,7 @@ class SqliteJournalRepository implements JournalRepository {
       whereArgs: [id],
       limit: 1,
     );
-    if (rows.isEmpty) return null;
-    return JournalEntry.fromMap(rows.first);
+    return rows.isEmpty ? null : JournalEntry.fromMap(rows.first);
   }
 
   @override
@@ -51,6 +63,9 @@ class SqliteJournalRepository implements JournalRepository {
     DateTime? from,
     DateTime? to,
   }) async {
+    if (from != null && to != null && to.isBefore(from)) {
+      throw ArgumentError('Journal end date must not precede start date.');
+    }
     final clauses = <String>[];
     final args = <Object?>[];
     if (from != null) {
@@ -73,10 +88,18 @@ class SqliteJournalRepository implements JournalRepository {
 
   @override
   Future<void> deleteEntry(String id) async {
-    await (await _db).delete(
-      'journal_entries',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'attachments',
+        where: 'owner_type = ? AND owner_id = ?',
+        whereArgs: ['journal', id],
+      );
+      await txn.delete(
+        'journal_entries',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 }
