@@ -7,12 +7,17 @@ void main() {
   final openedAt = DateTime.utc(2026, 1, 1, 9);
   final closedAt = DateTime.utc(2026, 1, 1, 10);
 
-  Trade makeTrade(TradeDirection direction) => Trade(
+  Trade makeTrade(
+    TradeDirection direction, {
+    double contractMultiplier = 1,
+  }) =>
+      Trade(
         id: 'trade-1',
         symbol: 'TEST',
         direction: direction,
         createdAt: openedAt,
         updatedAt: closedAt,
+        contractMultiplier: contractMultiplier,
       );
 
   TradeExecution fill({
@@ -116,8 +121,31 @@ void main() {
 
       expect(metrics.closedQuantity, 1.5);
       expect(metrics.openQuantity, 0.5);
-      expect(metrics.averageEntryPrice, closeTo(103.333333, 0.00001));
+      expect(metrics.averageEntryPrice, closeTo(101.666667, 0.00001));
       expect(metrics.grossRealizedPnl, 12.5);
+    });
+
+    test('applies contract multiplier to realized gross P&L', () {
+      final metrics = TradeCalculator.calculate(
+        trade: makeTrade(TradeDirection.long, contractMultiplier: 10),
+        executions: [
+          fill(
+            id: 'entry',
+            kind: ExecutionKind.entry,
+            quantity: 2,
+            price: 100,
+          ),
+          fill(
+            id: 'exit',
+            kind: ExecutionKind.exit,
+            quantity: 2,
+            price: 101,
+            at: closedAt,
+          ),
+        ],
+      );
+
+      expect(metrics.grossRealizedPnl, 20);
     });
 
     test('rejects exits larger than the recorded open quantity', () {
