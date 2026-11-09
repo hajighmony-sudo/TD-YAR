@@ -1,4 +1,5 @@
 import 'trade.dart';
+import 'trade_realization.dart';
 
 class TradeOutcome {
   const TradeOutcome({
@@ -45,13 +46,13 @@ class PerformanceBreakdown {
   final int winCount;
   final int lossCount;
 
-  double get winRate =>
-      tradeCount == 0 ? 0 : winCount / tradeCount * 100;
+  double get winRate => tradeCount == 0 ? 0 : winCount / tradeCount * 100;
 }
 
 class PerformanceReport {
   const PerformanceReport({
     required this.outcomes,
+    required this.realizations,
     required this.totalTrades,
     required this.wins,
     required this.losses,
@@ -72,7 +73,12 @@ class PerformanceReport {
     required this.byHour,
   });
 
+  /// One aggregate outcome per trade in the requested reporting window.
   final List<TradeOutcome> outcomes;
+
+  /// One record per exit fill, preserving the date of each partial realization.
+  final List<TradeRealization> realizations;
+
   final int totalTrades;
   final int wins;
   final int losses;
@@ -91,4 +97,16 @@ class PerformanceReport {
   final List<PerformanceBreakdown> byStrategy;
   final List<PerformanceBreakdown> byWeekday;
   final List<PerformanceBreakdown> byHour;
+
+  double get averageTrade => totalTrades == 0 ? 0 : netPnl / totalTrades;
+  double get grossProfit =>
+      outcomes.where((item) => item.netPnl > 0).fold<double>(
+        0, (sum, item) => sum + item.netPnl,
+      );
+  double get grossLoss =>
+      outcomes.where((item) => item.netPnl < 0).fold<double>(
+        0, (sum, item) => sum + item.netPnl.abs(),
+      );
+  double get recoveryFactor =>
+      maxDrawdown == 0 ? (netPnl > 0 ? double.infinity : 0) : netPnl / maxDrawdown;
 }
