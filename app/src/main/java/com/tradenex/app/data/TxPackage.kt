@@ -29,7 +29,7 @@ object TxPackage {
     private val MAGIC = byteArrayOf('T'.code.toByte(), 'X'.code.toByte(), 'P'.code.toByte(), 'K'.code.toByte(), 1)
     private const val CHUNK = 1 shl 20
     private const val APP_SECRET = "TRADIX-TX-PACKAGE-v1"
-    private const val ITER = 120_000
+    private const val ITER = 60_000
 
     class BadPackage(message: String) : Exception(message)
 
@@ -315,7 +315,7 @@ object TxPackage {
             if (entry.name == "manifest.json") {
                 manifest = JSONObject(String(zip.readBytes(), Charsets.UTF_8))
             } else if (
-                (entry.name.startsWith("lesson_media/") || entry.name.startsWith("strategy_media/")) &&
+                (entry.name.startsWith("media/") || entry.name.startsWith("lesson_media/") || entry.name.startsWith("strategy_media/")) &&
                 !entry.name.contains("..") && !entry.name.startsWith("/")
             ) {
                 val safeName = entry.name.substringAfterLast('/').replace('\\', '_')
