@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -297,4 +298,22 @@ private fun NavBtn(label: String, icon: ImageVector, selected: Boolean, onClick:
         Icon(icon, label, tint = c, modifier = Modifier.size(24.dp))
         Text(label, color = c, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
+}
+
+
+/** Shared single-line text input used by settings and forms. */
+@Composable
+fun TxField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = modifier.fillMaxWidth(),
+        singleLine = true,
+    )
 }
