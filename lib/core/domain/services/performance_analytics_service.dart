@@ -1,6 +1,7 @@
 import '../../data/repositories/trade_repository.dart';
 import '../models/performance_report.dart';
 import '../models/trade_execution.dart';
+import '../models/trade.dart';
 import 'performance_analytics.dart';
 
 class PerformanceAnalyticsService {
