@@ -3,7 +3,14 @@ import '../local/app_database.dart';
 import 'app_infrastructure_repository.dart';
 class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
  SqliteAppInfrastructureRepository({AppDatabase? database}):_db=database??AppDatabase.instance;final AppDatabase _db;
- @override Future<void> saveAccount(TradingAccount a) async=>(await _db.database).insert('trading_accounts',a.toMap(),conflictAlgorithm:ConflictAlgorithm.replace);
+ @override Future<void> saveAccount(TradingAccount a) async {
+  if(a.name.trim().isEmpty||a.currency.trim().isEmpty)throw ArgumentError('Account name and currency are required.');
+  if(!a.initialBalance.isFinite||a.initialBalance<0)throw ArgumentError.value(a.initialBalance,'initialBalance');
+  final db=await _db.database;
+  final duplicate=await db.query('trading_accounts',columns:['id'],where:'name = ? COLLATE NOCASE AND id != ?',whereArgs:[a.name.trim(),a.id],limit:1);
+  if(duplicate.isNotEmpty)throw StateError('An account with this name already exists.');
+  await db.insert('trading_accounts',a.toMap(),conflictAlgorithm:ConflictAlgorithm.replace);
+ }
  @override Future<TradingAccount?> getAccount(String id) async {final r=await (await _db.database).query('trading_accounts',where:'id = ?',whereArgs:[id],limit:1);return r.isEmpty?null:TradingAccount.fromMap(r.first);}
  @override Future<List<TradingAccount>> listAccounts({bool includeArchived=false}) async {final r=await (await _db.database).query('trading_accounts',where:includeArchived?null:'is_archived = 0',orderBy:'name COLLATE NOCASE');return r.map(TradingAccount.fromMap).toList();}
  @override Future<void> archiveAccount(String id,bool archived,DateTime at) async=>(await _db.database).update('trading_accounts',{'is_archived':archived?1:0,'updated_at':at.toUtc().toIso8601String()},where:'id = ?',whereArgs:[id]);
