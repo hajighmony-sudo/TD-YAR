@@ -28,6 +28,10 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
             "SHOW_SNOOZED" -> NexNotify.journalReminder(context)
             "NEWS_REMINDER" -> {
+                val reminderPrefs = context.getSharedPreferences("nex_calendar_reminders", Context.MODE_PRIVATE)
+                val savedIds = reminderPrefs.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
+                savedIds.remove(id.toString())
+                reminderPrefs.edit().putStringSet("ids", savedIds).apply()
                 val title = intent.getStringExtra("title").orEmpty()
                 val currency = intent.getStringExtra("currency").orEmpty()
                 NexNotify.show(
