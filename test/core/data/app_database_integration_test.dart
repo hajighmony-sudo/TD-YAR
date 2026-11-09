@@ -166,5 +166,32 @@ void main() {
     );
     expect(insertedRows, isEmpty);
   });
+  test('schema-v7 databases migrate risk-profile account links to v8', () async {
+    await AppDatabase.instance.close();
+    final filePath = await AppDatabase.instance.databaseFile;
+    final legacy = await databaseFactory.openDatabase(
+      filePath,
+      options: OpenDatabaseOptions(
+        version: 7,
+        onCreate: (db, version) async {
+          await db.execute(
+            'CREATE TABLE risk_profiles (id TEXT PRIMARY KEY, updated_at TEXT NOT NULL)',
+          );
+        },
+      ),
+    );
+    await legacy.close();
+
+    final migrated = await AppDatabase.instance.database;
+    final columns = await migrated.rawQuery('PRAGMA table_info(risk_profiles)');
+    expect(columns.any((column) => column['name'] == 'account_id'), isTrue);
+    expect(
+      await migrated.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_risk_profiles_account'",
+      ),
+      hasLength(1),
+    );
+  });
+
 
 }
