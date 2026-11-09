@@ -15,11 +15,14 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.tradenex.app.MainActivity
 import com.tradenex.app.R
+import com.tradenex.app.notifications.NexNotify
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.temporal.WeekFields
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
@@ -41,6 +44,14 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
             val reason = plan?.optString("noTradeReason").orEmpty()
             val confirmed = plan?.optBoolean("confirmed", false) ?: false
             if (count == 0 && (!confirmed || reason.isBlank())) notifyReview()
+        }
+        if (reminderOn && today.dayOfWeek.value == 5) {
+            val weeklyPrefs = applicationContext.getSharedPreferences("nex_notify_weekly", Context.MODE_PRIVATE)
+            val weekKey = "${today.get(WeekFields.ISO.weekBasedYear())}-${today.get(WeekFields.ISO.weekOfWeekBasedYear())}"
+            if (weeklyPrefs.getString("sent_week", null) != weekKey) {
+                NexNotify.weeklyReport(applicationContext)
+                weeklyPrefs.edit().putString("sent_week", weekKey).apply()
+            }
         }
         ReminderScheduler.schedule(applicationContext)
         return Result.success()
@@ -64,23 +75,7 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
     }
 
     private fun notifyReview() {
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
-            NotificationChannel(ReminderScheduler.CHANNEL, "مرور روزانه معاملات", NotificationManager.IMPORTANCE_DEFAULT),
-        )
-        val intent = PendingIntent.getActivity(applicationContext, 1201, Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            data = android.net.Uri.parse("tradix://weekly_reminder")
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(applicationContext, ReminderScheduler.CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("امروز معامله‌ای نداشتی؟")
-            .setContentText("وارد TRADIX شو و دلیل نداشتن معامله را در برنامه هفتگی ثبت کن.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("اگر بازار ستاپ مناسبی نداشت یا تصمیم گرفتی معامله نکنی، دلیلش را ثبت کن تا گزارش هفتگی دقیق‌تری داشته باشی."))
-            .setContentIntent(intent)
-            .setAutoCancel(true)
-            .build()
-        manager.notify(todayNotificationId(), notification)
+        NexNotify.journalReminder(applicationContext)
     }
 
     private fun todayNotificationId() = LocalDate.now().dayOfYear + 7000
