@@ -47,6 +47,7 @@ import com.tradenex.app.data.AppState
 import com.tradenex.app.data.ForexFactoryCalendarStore
 import com.tradenex.app.data.ForexFactoryEvent
 import com.tradenex.app.data.JalaliCalendar
+import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
@@ -79,8 +80,11 @@ fun CalendarScreen(nav: NavController) {
     var tab by remember { mutableStateOf(0) }
     var offset by remember { mutableStateOf(0) }
     var filter by remember { mutableStateOf(0) }
-    var remind by remember { mutableStateOf(setOf<Int>()) }
     val context = LocalContext.current
+    val reminderPrefs = remember(context) { context.getSharedPreferences("nex_calendar_reminders", android.content.Context.MODE_PRIVATE) }
+    var remind by remember {
+        mutableStateOf(reminderPrefs.getStringSet("ids", emptySet())?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet())
+    }
     var refreshCounter by remember { mutableStateOf(0) }
     var selectedNewsEvent by remember { mutableStateOf<ForexFactoryEvent?>(null) }
     var newsEvents by remember { mutableStateOf(emptyList<ForexFactoryEvent>()) }
@@ -414,7 +418,21 @@ fun CalendarScreen(nav: NavController) {
                                         "یادآور",
                                         tint = if (hasReminder) Tx.Gold else Tx.Muted,
                                         modifier = Modifier.size(22.dp).clickable {
-                                            remind = if (hasReminder) remind - event.id else remind + event.id
+                                            if (hasReminder) {
+                                                NexNotify.cancelNewsReminder(context, event.id)
+                                                val updated = remind - event.id
+                                                remind = updated
+                                                reminderPrefs.edit().putStringSet("ids", updated.map(Int::toString).toSet()).apply()
+                                            } else {
+                                                val scheduled = NexNotify.scheduleNewsReminder(context, event.id, event.title, event.currency, event.timestampMillis)
+                                                if (scheduled) {
+                                                    val updated = remind + event.id
+                                                    remind = updated
+                                                    reminderPrefs.edit().putStringSet("ids", updated.map(Int::toString).toSet()).apply()
+                                                } else {
+                                                    newsMessage = "زمان این خبر گذشته است؛ فقط برای خبرهای آینده می‌توان یادآور گذاشت."
+                                                }
+                                            }
                                         },
                                     )
                                 }
