@@ -76,6 +76,10 @@ void main() {
     expect(insights.planAdherencePercent, 50);
     expect(insights.fomoCount, 1);
     expect(insights.revengeTradeCount, 1);
+    expect(insights.linkedTradeEntryCount, 2);
+    expect(insights.moodCounts['calm'], 1);
+    expect(insights.averagePnlWhenFomo, -5);
+    expect(insights.averagePnlWithoutFomo, 12);
     expect(insights.averagePnlWhenPlanFollowed, 12);
     expect(insights.averagePnlWhenPlanNotFollowed, -5);
   });
