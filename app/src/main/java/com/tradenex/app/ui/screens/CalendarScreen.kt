@@ -47,6 +47,7 @@ import com.tradenex.app.data.AppState
 import com.tradenex.app.data.ForexFactoryCalendarStore
 import com.tradenex.app.data.ForexFactoryEvent
 import com.tradenex.app.data.JalaliCalendar
+import com.tradenex.app.data.NewsLocalization
 import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.IconBox
@@ -392,21 +393,16 @@ fun CalendarScreen(nav: NavController) {
                                         Text(event.currency, color = Tx.Text, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                                     }
                                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                        Text(event.title, color = Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                                        Text(NewsLocalization.title(event.title, settings.language), color = Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2)
                                         Text(
-                                            when (event.impact) {
-                                                2 -> "تأثیر بالا"
-                                                1 -> "تأثیر متوسط"
-                                                -1 -> "تعطیلی"
-                                                else -> "تأثیر کم"
-                                            },
+                                            NewsLocalization.impact(event.impact, settings.language),
                                             color = impactColor,
                                             fontSize = 10.sp,
                                         )
                                         Text(
-                                            "قبلی: " + event.previous.ifBlank { "—" } +
-                                                " · پیش‌بینی: " + event.forecast.ifBlank { "—" } +
-                                                " · واقعی: " + event.actual.ifBlank { "—" },
+                                            NewsLocalization.label("previous", settings.language) + ": " + event.previous.ifBlank { "—" } +
+                                                " · " + NewsLocalization.label("forecast", settings.language) + ": " + event.forecast.ifBlank { "—" } +
+                                                " · " + NewsLocalization.label("actual", settings.language) + ": " + event.actual.ifBlank { "—" },
                                             color = Tx.Muted,
                                             fontSize = 9.sp,
                                             maxLines = 2,
@@ -450,6 +446,39 @@ fun CalendarScreen(nav: NavController) {
         }
         Spacer(Modifier.height(12.dp))
     }
+
+    selectedNewsEvent?.let { event ->
+        val language = AppState.settings.language
+        val local = Instant.ofEpochMilli(event.timestampMillis).atZone(ZoneId.systemDefault())
+        AlertDialog(
+            onDismissRequest = { selectedNewsEvent = null },
+            containerColor = Tx.Dialog,
+            title = { Text(NewsLocalization.title(event.title, language), color = Tx.Text, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(NewsLocalization.label("currency", language) + ": " + event.currency, color = Tx.Text)
+                    Text(NewsLocalization.label("time", language) + ": " + local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US)), color = Tx.Muted)
+                    Text(NewsLocalization.impact(event.impact, language), color = when (event.impact) { 2 -> Tx.Red; 1 -> Tx.Gold; else -> Tx.Muted })
+                    Text(NewsLocalization.label("previous", language) + ": " + event.previous.ifBlank { "—" }, color = Tx.Muted)
+                    Text(NewsLocalization.label("forecast", language) + ": " + event.forecast.ifBlank { "—" }, color = Tx.Muted)
+                    Text(NewsLocalization.label("actual", language) + ": " + event.actual.ifBlank { "—" }, color = Tx.Muted)
+                    Text(
+                        if (language == 0) "جزئیات بالا تمام فیلدهایی است که فید عمومی این رویداد ارائه می‌کند؛ این فید متن تحلیلی یا مقاله کامل خبر را منتشر نمی‌کند."
+                        else "The public feed exposes the fields above; it does not provide a full article or narrative analysis for this event.",
+                        color = Tx.Muted,
+                        fontSize = 10.sp,
+                    )
+                    Text(NewsLocalization.label("source", language) + ": Forex Factory", color = Tx.Gold, fontSize = 10.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedNewsEvent = null }) {
+                    Text(if (language == 0) "بستن" else "Close", color = Tx.Gold)
+                }
+            },
+        )
+    }
+
 }
 
 @Composable
