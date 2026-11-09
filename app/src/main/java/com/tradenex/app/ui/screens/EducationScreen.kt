@@ -338,8 +338,12 @@ private fun LessonEditor(lesson: EducationLesson, context: android.content.Conte
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.035f))
                     .clickable(enabled = block.uri.isNotBlank()) {
                         runCatching {
+                            val sourceUri = Uri.parse(block.uri)
+                            val openUri = if (sourceUri.scheme == "file") {
+                                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(sourceUri.path ?: error("مسیر فایل نامعتبر است")))
+                            } else sourceUri
                             context.startActivity(Intent(Intent.ACTION_VIEW)
-                                .setDataAndType(Uri.parse(block.uri), block.mimeType.ifBlank { "*/*" })
+                                .setDataAndType(openUri, block.mimeType.ifBlank { "*/*" })
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
                         }
                     }.padding(9.dp),
