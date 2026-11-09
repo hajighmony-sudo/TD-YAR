@@ -333,7 +333,7 @@ internal object SnapshotCodec {
                 target.positions.add(
                     JournalPosition(
                         id = row.optLong("id"),
-                        accountId = row.optString("accountId", "default"),
+                        accountId = row.optString("accountId", ""),
                         symbol = row.optString("symbol", ""),
                         buy = row.optBoolean("buy", true),
                         strategy = row.optString("strategy", ""),
@@ -344,6 +344,18 @@ internal object SnapshotCodec {
                     ),
                 )
             }
+        }
+        val untouchedSyntheticAccount = target.accounts.singleOrNull {
+            it.id == "default" && it.name == "حساب اصلی" && it.broker.isBlank() &&
+                it.type == "REAL" && it.baseCurrency == "USD" && it.startingBalance == 10_000.0
+        }
+        if (
+            untouchedSyntheticAccount != null &&
+            target.trades.none { it.accountId == untouchedSyntheticAccount.id } &&
+            target.positions.none { it.accountId == untouchedSyntheticAccount.id }
+        ) {
+            target.accounts.remove(untouchedSyntheticAccount)
+            if (target.selectedAccountId == untouchedSyntheticAccount.id) target.selectedAccountId = ""
         }
         target.strategies.clear()
         val strategyRows = snapshot.optJSONArray("strategies") ?: JSONArray()
