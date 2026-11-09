@@ -24,7 +24,7 @@ class PsychologyAnalyticsService {
       throw ArgumentError('End date must not precede start date.');
     }
     final entries = await _psychologyRepository.getEntries(from: from, to: to);
-    final report = await _performanceService.buildReport();
+    final report = await _performanceService.buildReport(from: from, to: to);
     return analytics.analyze(entries: entries, outcomes: report.outcomes);
   }
 }
