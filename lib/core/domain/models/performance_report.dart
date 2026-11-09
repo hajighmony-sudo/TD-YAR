@@ -8,6 +8,7 @@ class TradeOutcome {
     required this.direction,
     required this.strategyId,
     required this.closedAt,
+    this.accountLabel,
     required this.netPnl,
     required this.grossPnl,
     required this.fees,
@@ -19,6 +20,7 @@ class TradeOutcome {
   final String symbol;
   final TradeDirection direction;
   final String? strategyId;
+  final String? accountLabel;
   final DateTime closedAt;
   final double netPnl;
   final double grossPnl;
@@ -69,6 +71,8 @@ class PerformanceReport {
     required this.averageDuration,
     required this.bySymbol,
     required this.byStrategy,
+    required this.byAccount,
+    required this.byDirection,
     required this.byWeekday,
     required this.byHour,
   });
@@ -95,6 +99,8 @@ class PerformanceReport {
   final Duration averageDuration;
   final List<PerformanceBreakdown> bySymbol;
   final List<PerformanceBreakdown> byStrategy;
+  final List<PerformanceBreakdown> byAccount;
+  final List<PerformanceBreakdown> byDirection;
   final List<PerformanceBreakdown> byWeekday;
   final List<PerformanceBreakdown> byHour;
 
