@@ -58,6 +58,7 @@ fun MetaTraderScreen(nav: NavController) {
                 TxChip("گزارش MT4/MT5", tab == 1, { tab = 1 }, Modifier.weight(1f))
                 TxChip("MetaApi", tab == 2, { tab = 2 }, Modifier.weight(1f))
             }
+            Text("اتصال فقط‌خواندنی است: صرفاً تاریخچه و معاملات بسته‌شده وارد ژورنال می‌شوند؛ هیچ سفارش خرید/فروش ثبت، باز، بسته یا ویرایش نمی‌شود.", color = Tx.Green, fontSize = 11.sp)
             Text("معامله‌ها به حساب فعال «${account.name}» اضافه می‌شوند و با شماره‌ی تیکت تکراری ثبت نمی‌شوند.", color = Tx.Muted, fontSize = 11.sp)
         }
         when (tab) {
