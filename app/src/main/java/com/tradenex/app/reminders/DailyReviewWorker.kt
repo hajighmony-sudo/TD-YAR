@@ -45,7 +45,7 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
             val confirmed = plan?.optBoolean("confirmed", false) ?: false
             if (count == 0 && (!confirmed || reason.isBlank())) notifyReview()
         }
-        if (today.dayOfWeek.value == 5) {
+        if (reminderOn && today.dayOfWeek.value == 5) {
             val weeklyPrefs = applicationContext.getSharedPreferences("nex_notify_weekly", Context.MODE_PRIVATE)
             val weekKey = "${today.get(WeekFields.ISO.weekBasedYear())}-${today.get(WeekFields.ISO.weekOfWeekBasedYear())}"
             if (weeklyPrefs.getString("sent_week", null) != weekKey) {
