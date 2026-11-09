@@ -77,7 +77,17 @@ class ReportExportService {
       });
     }
 
-    final journals = await _journals.getEntries(from: from, to: to);
+    final journals = (await _journals.getEntries(from: from, to: to))
+        .map((entry) {
+          final row = entry.toMap();
+          row['linked_trade_ids_json'] = jsonEncode(
+            entry.linkedTradeIds
+                .where(selectedTradeIds.contains)
+                .toList(growable: false),
+          );
+          return row;
+        })
+        .toList(growable: false);
     final strategies = await _strategies.getAll(includeArchived: true);
     final playbooks = _playbooks == null
         ? <Map<String, Object?>>[]
@@ -91,6 +101,8 @@ class ReportExportService {
     final psychology = _psychology == null
         ? <Map<String, Object?>>[]
         : (await _psychology.getEntries(from: from, to: to))
+            .where((entry) =>
+                entry.tradeId == null || selectedTradeIds.contains(entry.tradeId))
             .map((entry) => entry.toMap())
             .toList();
     final riskProfiles = _risk == null
