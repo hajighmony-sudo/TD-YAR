@@ -23,11 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.tradenex.app.core.Jalali
 import com.tradenex.app.core.NativeCore
 import com.tradenex.app.core.RiskMath
-import com.tradenex.app.data.Analytics
 import com.tradenex.app.data.AppState
+import com.tradenex.app.data.JalaliCalendar
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.SectionTitle
 import com.tradenex.app.ui.components.StatTile
@@ -37,6 +36,9 @@ import java.util.Locale
 
 private fun f1(v: Double) = String.format(Locale.US, "%.1f", v)
 private fun f2(v: Double) = String.format(Locale.US, "%.2f", v)
+private fun persianDigits(value: Int): String = value.toString().map { ch ->
+    if (ch in '0'..'9') ('۰' + (ch - '0')) else ch
+}.joinToString("")
 
 /** Risk lab: Kelly, R-multiples, underwater (drawdown) curve and a bootstrap Monte-Carlo fan chart of past trades. */
 @Composable
@@ -44,7 +46,7 @@ fun RiskLabScreen(nav: NavController) {
     val account = AppState.selectedAccount
     val trades = AppState.visibleTrades
     val start = account.startingBalance
-    val ordered = remember(trades) { Analytics.chronological(trades) }
+    val ordered = remember(trades) { trades.sortedWith(compareBy({ it.epochDay }, { it.openedAtMillis }, { it.id })) }
     val pnls = remember(ordered) { ordered.map { it.pnl }.toDoubleArray() }
     var ruinIdx by remember { mutableStateOf(1) }
     var horizonIdx by remember { mutableStateOf(1) }
@@ -54,14 +56,15 @@ fun RiskLabScreen(nav: NavController) {
     Page(title = "آزمایشگاه ریسک", onBack = { nav.popBackStack() }) {
         if (pnls.size < 5) {
             GlassCard(Modifier.fillMaxWidth()) {
-                Text("برای محاسبه‌ی آمار ریسک حداقل ۵ معامله در «${account.name}» لازم است. (${Jalali.digits(pnls.size)} معامله ثبت شده)", color = Tx.Muted, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+                Text("برای محاسبه‌ی آمار ریسک حداقل ۵ معامله در «${account.name}» لازم است. (${persianDigits(pnls.size)} معامله ثبت شده)", color = Tx.Muted, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
             }
             return@Page
         }
-        val x = remember(pnls) { NativeCore.extStats(pnls) }
-        val kelly = RiskMath.kelly(x.winRate, x.payoff)
+        val x = remember(pnls) { NativeCore.performanceMetrics(pnls) }
+        val payoff = if (x.averageLoss > 0.0) x.averageWin / x.averageLoss else 0.0
+        val kelly = RiskMath.kelly(x.winRate, payoff)
         val r = remember(ordered) { RiskMath.rMultiples(ordered) }
-        val curve = remember(pnls, start) { NativeCore.equityCurve(pnls, start) }
+        val curve = remember(pnls, start) { DoubleArray(pnls.size) { index -> start + pnls.take(index + 1).sum() } }
         val dd = remember(curve) { RiskMath.drawdownSeries(curve) }
         val mc = remember(pnls, start, ruinIdx, horizonIdx) { RiskMath.monteCarlo(pnls, start, horizons[horizonIdx], 600, ruinFractions[ruinIdx]) }
 
