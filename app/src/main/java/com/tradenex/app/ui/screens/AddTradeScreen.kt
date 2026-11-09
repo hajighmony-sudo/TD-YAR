@@ -84,6 +84,7 @@ fun AddTradeScreen(nav: NavController) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var buy by remember { mutableStateOf(true) }
+    var sideChosen by remember { mutableStateOf(false) }
     var symbol by remember { mutableStateOf("") }
     var lot by remember { mutableStateOf(settings.defaultLot.coerceAtLeast(0.0)) }
     var lotText by remember { mutableStateOf(if (settings.defaultLot > 0.0) String.format(java.util.Locale.US, "%.2f", settings.defaultLot) else "") }
@@ -106,8 +107,8 @@ fun AddTradeScreen(nav: NavController) {
     var takeProfitText by remember { mutableStateOf("") }
     var notesText by remember { mutableStateOf("") }
     var tradeNameText by remember { mutableStateOf("") }
-    var tradeDateText by remember { mutableStateOf(LocalDate.now().toString()) }
-    var tradeTimeText by remember { mutableStateOf(java.time.LocalTime.now().withSecond(0).withNano(0).toString()) }
+    var tradeDateText by remember { mutableStateOf("") }
+    var tradeTimeText by remember { mutableStateOf("") }
     var timeframe by remember { mutableStateOf("") }
     var marketCondition by remember { mutableStateOf("") }
     var plannedRiskText by remember { mutableStateOf("") }
@@ -160,8 +161,8 @@ fun AddTradeScreen(nav: NavController) {
         }
         Reveal(0) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SideButton("خرید (Buy)", true, buy, Tx.Green, Modifier.weight(1f)) { buy = true }
-                SideButton("فروش (Sell)", false, !buy, Tx.Red, Modifier.weight(1f)) { buy = false }
+                SideButton("خرید (Buy)", true, sideChosen && buy, Tx.Green, Modifier.weight(1f)) { buy = true; sideChosen = true }
+                SideButton("فروش (Sell)", false, sideChosen && !buy, Tx.Red, Modifier.weight(1f)) { buy = false; sideChosen = true }
             }
         }
         Reveal(1) {
@@ -201,7 +202,7 @@ fun AddTradeScreen(nav: NavController) {
                         Text("تاریخ شمسی: " + jalaliText(parsedTradeDate), color = Tx.Gold, fontSize = 10.sp)
                     }
                     Text("ساعت بازشدن معامله", color = Tx.Muted, fontSize = 11.sp)
-                    TxField(tradeTimeText, { tradeTimeText = it }, "HH:mm")
+                    TxField(tradeTimeText, { tradeTimeText = it }, "ساعت معامله را وارد کن؛ HH:mm")
                     Text("نام معامله یا ستاپ (اختیاری)", color = Tx.Muted, fontSize = 11.sp)
                     TxField(tradeNameText, { tradeNameText = it }, "مثلاً London Breakout · ستاپ ICT")
                 }
@@ -389,6 +390,7 @@ fun AddTradeScreen(nav: NavController) {
             GoldButton("ذخیره معامله در دفترچه") {
                 when {
                     AppState.accounts.none { !it.archived } -> saveMessage = "ابتدا حساب معاملاتی خودت را ایجاد کن."
+                    !sideChosen -> saveMessage = "جهت معامله (خرید یا فروش) را انتخاب کن."
                     symbol.isBlank() -> saveMessage = "نماد یا نام دارایی را وارد کن."
                     lot <= 0.0 || !lot.isFinite() -> saveMessage = "حجم معامله را وارد کن."
                     parsedTradeDate == null -> saveMessage = "تاریخ معامله معتبر نیست."
