@@ -78,7 +78,7 @@ void main() {
     final engine = TradingSessions();
     final overnight = session(
       id: 'overnight', name: 'Overnight',
-      timezoneId: 'Etc/UTC', openHour: 22, closeHour: 6,
+      timezoneId: 'UTC', openHour: 22, closeHour: 6,
       weekdays: const [1],
     );
     final status = engine.statusesAt(
@@ -93,7 +93,7 @@ void main() {
   test('invalid session definitions are rejected', () {
     final invalid = session(
       id: 'bad', name: 'Bad',
-      timezoneId: 'Etc/UTC', openHour: 8, closeHour: 8,
+      timezoneId: 'UTC', openHour: 8, closeHour: 8,
     );
     expect(invalid.validate, throwsArgumentError);
     expect(
