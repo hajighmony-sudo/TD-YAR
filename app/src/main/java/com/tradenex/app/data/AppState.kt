@@ -70,6 +70,34 @@ enum class ContentKind(val label: String) {
 
 data class Lesson(val id: Long, val title: String, val kind: ContentKind, val progress: Float)
 
+data class PositionFill(
+    val id: Long,
+    val volume: Double,
+    val price: Double,
+    val realizedPnl: Double = 0.0,
+    val atMillis: Long = System.currentTimeMillis(),
+)
+
+data class JournalPosition(
+    val id: Long,
+    val accountId: String,
+    val symbol: String,
+    val buy: Boolean,
+    val strategy: String,
+    val entryFills: List<PositionFill>,
+    val exitFills: List<PositionFill> = emptyList(),
+    val notes: String = "",
+    val openedAtMillis: Long = System.currentTimeMillis(),
+) {
+    val enteredVolume: Double get() = entryFills.sumOf { it.volume }
+    val exitedVolume: Double get() = exitFills.sumOf { it.volume }
+    val openVolume: Double get() = (enteredVolume - exitedVolume).coerceAtLeast(0.0)
+    val averageEntry: Double get() = if (enteredVolume <= 0.0) 0.0 else entryFills.sumOf { it.volume * it.price } / enteredVolume
+    val averageExit: Double get() = if (exitedVolume <= 0.0) 0.0 else exitFills.sumOf { it.volume * it.price } / exitedVolume
+    val realizedPnl: Double get() = exitFills.sumOf { it.realizedPnl }
+    val isClosed: Boolean get() = openVolume <= 1e-8
+}
+
 data class AppSettings(
     val language: Int = 0,
     val showGlobe: Boolean = true,
@@ -97,6 +125,7 @@ data class AppSettings(
 
 object AppState {
     val trades = mutableStateListOf<Trade>()
+    val positions = mutableStateListOf<JournalPosition>()
     val accounts = mutableStateListOf(
         TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10_000.0),
     )
@@ -159,6 +188,63 @@ object AppState {
         }
         require(t.lot > 0.0 && t.pnl.isFinite()) { "Trade volume and P&L must be valid." }
         trades.add(t)
+        persist()
+    }
+
+    fun addPosition(position: JournalPosition) {
+        require(position.symbol.isNotBlank() && position.entryFills.isNotEmpty())
+        require(position.entryFills.all { it.volume > 0.0 && it.price > 0.0 && it.volume.isFinite() && it.price.isFinite() })
+        positions.add(position)
+        persist()
+    }
+
+    fun addPositionEntry(positionId: Long, fill: PositionFill) {
+        require(fill.volume > 0.0 && fill.price > 0.0 && fill.volume.isFinite() && fill.price.isFinite())
+        val index = positions.indexOfFirst { it.id == positionId }
+        if (index < 0) return
+        val current = positions[index]
+        require(!current.isClosed) { "Closed positions cannot be reopened." }
+        positions[index] = current.copy(entryFills = current.entryFills + fill)
+        persist()
+    }
+
+    fun addPositionExit(positionId: Long, fill: PositionFill) {
+        require(fill.volume > 0.0 && fill.price > 0.0 && fill.volume.isFinite() && fill.price.isFinite() && fill.realizedPnl.isFinite())
+        val index = positions.indexOfFirst { it.id == positionId }
+        if (index < 0) return
+        val current = positions[index]
+        require(!current.isClosed && fill.volume <= current.openVolume + 1e-8) { "Exit volume exceeds the open position volume." }
+        val updated = current.copy(exitFills = current.exitFills + fill)
+        positions[index] = updated
+        if (updated.isClosed && trades.none { it.id == updated.id }) {
+            val closedAt = updated.exitFills.maxOfOrNull { it.atMillis } ?: System.currentTimeMillis()
+            val closeDate = java.time.Instant.ofEpochMilli(closedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            trades.add(
+                Trade(
+                    id = updated.id,
+                    symbol = updated.symbol,
+                    buy = updated.buy,
+                    lot = updated.exitedVolume,
+                    pnl = updated.realizedPnl,
+                    strategy = updated.strategy,
+                    tags = emptyList(),
+                    epochDay = closeDate.toEpochDay(),
+                    emotion = "",
+                    accountId = updated.accountId,
+                    openedAtMillis = updated.openedAtMillis,
+                    closedAtMillis = closedAt,
+                    entryPrice = updated.averageEntry,
+                    exitPrice = updated.averageExit,
+                    notes = updated.notes,
+                    tradeName = "پوزیشن تکمیل‌شده",
+                ),
+            )
+        }
+        persist()
+    }
+
+    fun deletePosition(positionId: Long) {
+        positions.removeAll { it.id == positionId }
         persist()
     }
 
