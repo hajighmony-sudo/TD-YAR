@@ -73,7 +73,7 @@ fun PerformanceScreen(nav: NavController) {
         else -> 365
     }
     val windowStartDay = today - (windowDays - 1L)
-    val windowed = remember(period, trades) { trades.filter { it.epochDay >= windowStartDay } }
+    val windowed = remember(period, viewMode, windowStartDay, trades) { trades.filter { it.epochDay >= windowStartDay } }
     val pnlArray = remember(windowed) { windowed.map { it.pnl }.toDoubleArray() }
     val stats = remember(pnlArray) { NativeCore.stats(pnlArray) }
     val ext = remember(pnlArray) { NativeCore.performanceMetrics(pnlArray) }
