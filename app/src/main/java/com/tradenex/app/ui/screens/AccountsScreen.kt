@@ -196,10 +196,10 @@ fun AccountsScreen(nav: NavController) {
                             editingAccount = null
                         }
                     }
-                }) { Text("ایجاد حساب", color = Tx.Gold) }
+                }) { Text(if (editingAccount == null) "ایجاد حساب" else "ذخیره تغییرات", color = Tx.Gold) }
             },
             dismissButton = {
-                TextButton(onClick = { creating = false }) { Text("انصراف", color = Tx.Muted) }
+                TextButton(onClick = { creating = false; editingAccount = null }) { Text("انصراف", color = Tx.Muted) }
             },
         )
     }
