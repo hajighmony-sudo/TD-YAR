@@ -117,6 +117,12 @@ class DatabaseBackupService {
       );
       final tables = rows.map((row) => row['name'] as String).toSet();
       final missing = required.where((name) => !tables.contains(name));
+      if (version >= 7) {
+        final tradeColumns = await candidate.rawQuery('PRAGMA table_info(trades)');
+        if (!tradeColumns.any((column) => column['name'] == 'account_id')) {
+          throw const FormatException('Schema v7 backup is missing trades.account_id.');
+        }
+      }
       if (missing.isNotEmpty) {
         throw FormatException(
           'Backup is missing required tables: ${missing.join(', ')}.',
