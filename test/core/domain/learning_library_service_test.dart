@@ -21,23 +21,23 @@ void main() {
       expect(repository.items, hasLength(1));
     });
 
-    test('rejects image resources without a media path', () {
-      expect(
-        () => service.save(_resource(type: LearningContentType.image)),
+    test('rejects image resources without a media path', () async {
+      await expectLater(
+        service.save(_resource(type: LearningContentType.image)),
         throwsArgumentError,
       );
     });
 
-    test('requires both text and media for mixed resources', () {
-      expect(
-        () => service.save(_resource(type: LearningContentType.mixed)),
+    test('requires both text and media for mixed resources', () async {
+      await expectLater(
+        service.save(_resource(type: LearningContentType.mixed)),
         throwsArgumentError,
       );
     });
 
-    test('rejects non-http source URLs', () {
-      expect(
-        () => service.save(_resource(
+    test('rejects non-http source URLs', () async {
+      await expectLater(
+        service.save(_resource(
           type: LearningContentType.text,
           body: 'Note',
           sourceUrl: 'file:///private/source',
