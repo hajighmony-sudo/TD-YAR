@@ -10,7 +10,6 @@ class RiskManagementService {
 
   Future<RiskLimitCheck> evaluateDay({
     required String riskProfileId,
-    required DateTime date,
     required PerformanceReport dailyPerformance,
     required int tradesTakenToday,
     double nextPlannedRiskAmount = 0,
