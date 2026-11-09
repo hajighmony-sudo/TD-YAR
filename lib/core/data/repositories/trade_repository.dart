@@ -12,6 +12,7 @@ abstract interface class TradeRepository {
     TradeDirection? direction,
     String? strategyId,
     String? accountLabel,
+    String? accountId,
   });
   Future<void> addExecution(TradeExecution execution);
   Future<void> updateExecution(TradeExecution execution);
