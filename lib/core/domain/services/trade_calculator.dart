@@ -5,9 +5,7 @@ import '../models/trade_execution.dart';
 import '../models/trade_metrics.dart';
 
 /// Deterministic bookkeeping calculations for manually recorded executions.
-///
-/// Exits are matched to entry fills in FIFO order. This class does not fetch
-/// prices, estimate unrealized P&L, or produce trading recommendations.
+/// Exits are matched to entry fills in FIFO order.
 class TradeCalculator {
   const TradeCalculator._();
 
@@ -17,24 +15,20 @@ class TradeCalculator {
     required Trade trade,
     required List<TradeExecution> executions,
   }) {
-    if (trade.contractMultiplier <= 0) {
+    if (trade.id.trim().isEmpty || trade.symbol.trim().isEmpty) {
+      throw ArgumentError('Trade id and symbol are required.');
+    }
+    if (!trade.contractMultiplier.isFinite ||
+        trade.contractMultiplier <= 0) {
       throw ArgumentError.value(
         trade.contractMultiplier,
         'trade.contractMultiplier',
-        'Must be greater than zero.',
+        'Must be finite and greater than zero.',
       );
     }
 
-    final sorted = [...executions]
-      ..sort((a, b) {
-        final timeOrder = a.executedAt.compareTo(b.executedAt);
-        if (timeOrder != 0) return timeOrder;
-        if (a.kind != b.kind) {
-          return a.kind == ExecutionKind.entry ? -1 : 1;
-        }
-        return a.id.compareTo(b.id);
-      });
-
+    final ids = <String>{};
+    final sorted = [...executions]..sort(_compareExecutions);
     final openLots = Queue<_OpenLot>();
     var totalFees = 0.0;
     var closedQuantity = 0.0;
@@ -49,24 +43,31 @@ class TradeCalculator {
           'Every execution must belong to the supplied trade.',
         );
       }
-      if (execution.quantity <= 0 ||
+      if (execution.id.trim().isEmpty || !ids.add(execution.id)) {
+        throw ArgumentError('Execution ids must be non-empty and unique.');
+      }
+      if (!execution.quantity.isFinite ||
+          !execution.price.isFinite ||
+          !execution.fee.isFinite ||
+          execution.quantity <= 0 ||
           execution.price <= 0 ||
           execution.fee < 0) {
         throw ArgumentError(
-          'Quantity and price must be positive; fee cannot be negative.',
+          'Quantity and price must be finite and positive; fee must be finite and non-negative.',
         );
       }
 
       totalFees += execution.fee;
+      if (!totalFees.isFinite) {
+        throw ArgumentError('Execution fee total exceeds numeric range.');
+      }
 
       if (execution.kind == ExecutionKind.entry) {
-        openLots.add(
-          _OpenLot(
-            remainingQuantity: execution.quantity,
-            price: execution.price,
-            remainingFee: execution.fee,
-          ),
-        );
+        openLots.add(_OpenLot(
+          remainingQuantity: execution.quantity,
+          price: execution.price,
+          remainingFee: execution.fee,
+        ));
         continue;
       }
 
@@ -120,6 +121,15 @@ class TradeCalculator {
       totalFees: totalFees,
       netRealizedPnl: grossRealizedPnl - allocatedFees,
     );
+  }
+
+  static int _compareExecutions(TradeExecution a, TradeExecution b) {
+    final timeOrder = a.executedAt.compareTo(b.executedAt);
+    if (timeOrder != 0) return timeOrder;
+    if (a.kind != b.kind) {
+      return a.kind == ExecutionKind.entry ? -1 : 1;
+    }
+    return a.id.compareTo(b.id);
   }
 }
 
