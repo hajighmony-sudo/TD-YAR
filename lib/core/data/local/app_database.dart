@@ -9,22 +9,46 @@ class AppDatabase {
   static const int _databaseVersion = 8;
 
   Database? _database;
+  Future<Database>? _openingDatabase;
 
-  Future<String> get databaseFile async => path.join(await getDatabasesPath(), _databaseName);
+  Future<String> get databaseFile async =>
+      path.join(await getDatabasesPath(), _databaseName);
 
-  Future<Database> get database async {
+  /// Opens the database once even when multiple repositories request it at
+  /// the same time. Failed opens clear the in-flight future so callers can
+  /// retry rather than retaining a permanently failed Future.
+  Future<Database> get database {
     final existing = _database;
-    if (existing != null) return existing;
-    final directory = await getDatabasesPath();
-    final opened = await openDatabase(
-      path.join(directory, _databaseName),
-      version: _databaseVersion,
-      onCreate: _createSchema,
-      onUpgrade: _upgradeSchema,
-      onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
-    );
-    _database = opened;
-    return opened;
+    if (existing != null) return Future<Database>.value(existing);
+
+    final opening = _openingDatabase;
+    if (opening != null) return opening;
+
+    final future = _openDatabase();
+    _openingDatabase = future;
+    return future;
+  }
+
+  Future<Database> _openDatabase() async {
+    try {
+      final directory = await getDatabasesPath();
+      final opened = await openDatabase(
+        path.join(directory, _databaseName),
+        version: _databaseVersion,
+        onCreate: _createSchema,
+        onUpgrade: _upgradeSchema,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+          await db.execute('PRAGMA journal_mode = WAL');
+          await db.execute('PRAGMA synchronous = NORMAL');
+        },
+      );
+      _database = opened;
+      return opened;
+    } catch (_) {
+      _openingDatabase = null;
+      rethrow;
+    }
   }
 
   Future<void> _createSchema(Database db, int version) async {
@@ -373,8 +397,17 @@ class AppDatabase {
   }
 
   Future<void> close() async {
+    final opening = _openingDatabase;
+    if (opening != null) {
+      try {
+        await opening;
+      } catch (_) {
+        // A failed open has no live handle to close.
+      }
+    }
     final current = _database;
     _database = null;
+    _openingDatabase = null;
     if (current != null) await current.close();
   }
 }
