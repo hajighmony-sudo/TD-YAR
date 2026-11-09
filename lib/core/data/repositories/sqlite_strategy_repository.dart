@@ -11,28 +11,34 @@ class SqliteStrategyRepository implements StrategyRepository {
   final AppDatabase _database;
   Future<Database> get _db => _database.database;
 
+  static void _validate(Strategy strategy) {
+    if (strategy.id.trim().isEmpty || strategy.name.trim().isEmpty) {
+      throw ArgumentError('Strategy id and name are required.');
+    }
+    final collections = [
+      strategy.timeframes, strategy.setupConditions, strategy.entryRules,
+      strategy.exitRules, strategy.riskRules, strategy.checklistItems, strategy.tags,
+    ];
+    if (collections.any((items) => items.any((item) => item.trim().isEmpty))) {
+      throw ArgumentError('Strategy lists cannot contain empty values.');
+    }
+  }
+
   @override
   Future<void> create(Strategy strategy) async {
-    if (strategy.name.trim().isEmpty) {
-      throw ArgumentError.value(strategy.name, 'strategy.name', 'Required.');
-    }
+    _validate(strategy);
     await (await _db).insert(
-      'strategies',
-      strategy.toMap(),
+      'strategies', strategy.toMap(),
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }
 
   @override
   Future<void> update(Strategy strategy) async {
-    if (strategy.name.trim().isEmpty) {
-      throw ArgumentError.value(strategy.name, 'strategy.name', 'Required.');
-    }
+    _validate(strategy);
     final changed = await (await _db).update(
-      'strategies',
-      strategy.toMap(),
-      where: 'id = ?',
-      whereArgs: [strategy.id],
+      'strategies', strategy.toMap(),
+      where: 'id = ?', whereArgs: [strategy.id],
     );
     if (changed == 0) throw StateError('Strategy not found: ${strategy.id}');
   }
@@ -60,10 +66,8 @@ class SqliteStrategyRepository implements StrategyRepository {
     final db = await _db;
     await db.transaction((txn) async {
       await txn.update(
-        'trades',
-        {'strategy_id': null},
-        where: 'strategy_id = ?',
-        whereArgs: [id],
+        'trades', {'strategy_id': null},
+        where: 'strategy_id = ?', whereArgs: [id],
       );
       await txn.delete('strategies', where: 'id = ?', whereArgs: [id]);
     });
