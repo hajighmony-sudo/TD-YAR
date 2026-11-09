@@ -18,7 +18,7 @@ data class Trade(
     val tags: List<String>,
     val epochDay: Long,
     val emotion: String,
-    val accountId: String = "default",
+    val accountId: String = "",
     val openedAtMillis: Long = 0L,
     val closedAtMillis: Long = 0L,
     val entryPrice: Double? = null,
@@ -105,8 +105,8 @@ data class AppSettings(
     val reminderOn: Boolean = true,
     val reminderHour: Int = 22,
     val newsImpact: Int = 0,
-    val startBalance: Double = 10_000.0,
-    val defaultLot: Double = 0.10,
+    val startBalance: Double = 0.0,
+    val defaultLot: Double = 0.0,
     val riskPercent: Double = 1.0,
     val dailyLossLimitPercent: Double = 3.0,
     val maxTradesPerDay: Int = 5,
@@ -126,14 +126,13 @@ data class AppSettings(
 object AppState {
     val trades = mutableStateListOf<Trade>()
     val positions = mutableStateListOf<JournalPosition>()
-    val accounts = mutableStateListOf(
-        TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10_000.0),
-    )
-    var selectedAccountId by mutableStateOf("default")
+    // No synthetic account or starting balance is created. The user creates and configures every account.
+    val accounts = mutableStateListOf<TradingAccount>()
+    var selectedAccountId by mutableStateOf("")
     val selectedAccount: TradingAccount
         get() = accounts.firstOrNull { it.id == selectedAccountId && !it.archived }
             ?: accounts.firstOrNull { !it.archived }
-            ?: TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10_000.0)
+            ?: TradingAccount("", "حساب ثبت‌نشده", "", "", "", 0.0)
     val visibleTrades: List<Trade>
         get() = trades.filter { it.accountId == selectedAccountId }
     // User-created content only: no preloaded strategy templates or sample records.
@@ -183,6 +182,9 @@ object AppState {
     }
 
     fun addTrade(t: Trade) {
+        require(t.accountId.isNotBlank() && accounts.any { it.id == t.accountId && !it.archived }) {
+            "ابتدا حساب معاملاتی خودت را در بخش حساب‌ها ثبت و انتخاب کن."
+        }
         require(t.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}"))) {
             "Trade symbol must contain 1-24 letters, digits, dots, underscores, slashes or hyphens."
         }
@@ -192,6 +194,9 @@ object AppState {
     }
 
     fun addPosition(position: JournalPosition) {
+        require(position.accountId.isNotBlank() && accounts.any { it.id == position.accountId && !it.archived }) {
+            "ابتدا حساب معاملاتی خودت را در بخش حساب‌ها ثبت و انتخاب کن."
+        }
         require(position.symbol.isNotBlank() && position.entryFills.isNotEmpty())
         require(position.entryFills.all { it.volume > 0.0 && it.price > 0.0 && it.volume.isFinite() && it.price.isFinite() })
         positions.add(position)
