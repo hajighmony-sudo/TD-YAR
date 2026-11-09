@@ -328,7 +328,7 @@ private fun LessonEditor(lesson: EducationLesson, context: android.content.Conte
                 }
             }
             TextButton(onClick = {
-                EducationStore.updateMeta(lesson.id, category, tags.split(",").map(String::trim), favorite, linkedStrategyId)
+                EducationStore.updateMeta(lesson.id, category, tags.split(",").map { it.trim() }, favorite, linkedStrategyId)
             }) { Text("ذخیره مشخصات درس", color = Tx.Gold) }
             lesson.blocks.forEach { block ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.035f))
