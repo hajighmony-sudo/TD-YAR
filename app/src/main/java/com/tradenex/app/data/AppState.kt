@@ -47,7 +47,22 @@ data class TradingAccount(
     val archived: Boolean = false,
 )
 
-data class Strategy(val id: Long, val name: String, val rules: List<String>, val active: Boolean, val version: Int = 1)
+data class StrategyAttachment(
+    val id: Long,
+    val uri: String,
+    val mimeType: String,
+    val displayName: String,
+    val sizeBytes: Long = 0L,
+)
+
+data class Strategy(
+    val id: Long,
+    val name: String,
+    val rules: List<String>,
+    val active: Boolean,
+    val version: Int = 1,
+    val attachments: List<StrategyAttachment> = emptyList(),
+)
 
 data class StrategyRevision(
     val id: Long,
@@ -56,6 +71,7 @@ data class StrategyRevision(
     val name: String,
     val rules: List<String>,
     val createdAt: Long,
+    val attachments: List<StrategyAttachment> = emptyList(),
 )
 
 enum class ContentKind(val label: String) {
