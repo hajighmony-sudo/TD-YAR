@@ -304,6 +304,8 @@ internal object SnapshotCodec {
                 reminderHour = s.optInt("reminderHour", 22).coerceIn(0, 23),
                 newsImpact = s.optInt("newsImpact", 0), startBalance = s.optDouble("startBalance", 10000.0),
                 defaultLot = s.optDouble("defaultLot", 0.1), riskPercent = s.optDouble("riskPercent", 1.0),
+                dailyLossLimitPercent = s.optDouble("dailyLossLimitPercent", 3.0).coerceIn(0.5, 20.0),
+                maxTradesPerDay = s.optInt("maxTradesPerDay", 5).coerceIn(1, 100),
                 haptics = s.optBoolean("haptics", true), animations = s.optInt("animations", 1),
                 accent = s.optInt("accent", 0), weekendHoliday = s.optBoolean("weekendHoliday", true),
                 sessionAlerts = s.optBoolean("sessionAlerts", true), newsAlerts = s.optBoolean("newsAlerts", true),
