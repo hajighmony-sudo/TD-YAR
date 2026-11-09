@@ -180,11 +180,26 @@ fun StrategiesScreen(nav: NavController) {
                             }
                         }
                     }
+                    Text("فایل‌های پیوست استراتژی", color = Tx.Muted, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconBox(Icons.Rounded.Add, "افزودن فایل") {
+                            pickingForEdit = false
+                            attachmentPicker.launch(arrayOf("*/*"))
+                        }
+                        Text(attachments.size.toString() + " فایل انتخاب شده؛ فایل‌ها با URI نگهداری می‌شوند و در حافظه برنامه کپی نمی‌شوند.", color = Tx.Muted, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                    }
+                    attachments.forEach { file ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { attachments = attachments.filterNot { it.id == file.id } })
+                        }
+                    }
                     GoldButton("ذخیره استراتژی") {
                         if (name.isNotBlank()) {
-                            AppState.addStrategy(Strategy(System.currentTimeMillis(), name.trim(), rules.toList(), true))
+                            AppState.addStrategy(Strategy(System.currentTimeMillis(), name.trim(), rules.toList(), true, attachments = attachments.toList()))
                             name = ""
                             rules.clear()
+                            attachments = emptyList()
                         }
                     }
                 }
