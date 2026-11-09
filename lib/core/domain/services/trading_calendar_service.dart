@@ -20,24 +20,40 @@ class TradingCalendarService {
   final PsychologyRepository _psychologyRepository;
   final TradingCalendar _calendar;
 
-  Future<List<CalendarDaySummary>> month(int year, int month) async {
-    final start = DateTime(year, month);
-    final end = DateTime(year, month + 1);
+  Future<List<CalendarDaySummary>> day(DateTime date) =>
+      range(date, date);
+
+  Future<List<CalendarDaySummary>> week(DateTime date) {
+    final start = DateTime(date.year, date.month, date.day)
+        .subtract(Duration(days: date.weekday - DateTime.monday));
+    return range(start, start.add(const Duration(days: 6)));
+  }
+
+  Future<List<CalendarDaySummary>> month(int year, int month) =>
+      range(DateTime(year, month, 1), DateTime(year, month + 1, 0));
+
+  Future<List<CalendarDaySummary>> range(DateTime from, DateTime to) async {
+    final start = DateTime(from.year, from.month, from.day);
+    final end = DateTime(to.year, to.month, to.day);
+    if (end.isBefore(start)) {
+      throw ArgumentError('Calendar end date must not precede start date.');
+    }
+    final exclusiveEnd = end.add(const Duration(days: 1));
     final report = await _analyticsService.buildReport(
       from: start,
-      to: end.subtract(const Duration(microseconds: 1)),
+      to: exclusiveEnd.subtract(const Duration(microseconds: 1)),
     );
     final journalEntries = await _journalRepository.getEntries(
       from: start,
-      to: end.subtract(const Duration(microseconds: 1)),
+      to: exclusiveEnd.subtract(const Duration(microseconds: 1)),
     );
     final psychologyEntries = await _psychologyRepository.getEntries(
       from: start,
-      to: end.subtract(const Duration(microseconds: 1)),
+      to: exclusiveEnd.subtract(const Duration(microseconds: 1)),
     );
-    return _calendar.buildMonth(
-      year: year,
-      month: month,
+    return _calendar.buildRange(
+      from: start,
+      to: end,
       outcomes: report.outcomes,
       journalEntries: journalEntries,
       psychologyEntries: psychologyEntries,
