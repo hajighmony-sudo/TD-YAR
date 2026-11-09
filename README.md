@@ -12,7 +12,7 @@ Included foundations:
 - Personal risk profiles and per-trade risk records
 - User-authored strategy playbooks
 - Trading psychology journal and descriptive insights
-- Monthly trading calendar
+- Daily, weekly, monthly, and custom-range trading calendar
 - Local SQLite persistence and versioned migration
 
 Explicitly out of scope:
