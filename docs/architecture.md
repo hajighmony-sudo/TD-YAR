@@ -16,7 +16,7 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 ## Modules 1–5
 
 1. **Manual trade journal:** long/short trade records, multiple entry/exit fills, FIFO matching, fee allocation, notes, tags, strategy links and history validation.
-2. **Performance analytics:** dated partial-exit realizations, realized gross/net P&L, fees, win rate, average win/loss, profit factor, expectancy, drawdown, duration and symbol/strategy/account/direction/time breakdowns. Open P&L is not estimated without market prices.
+2. **Performance analytics:** dated partial-exit realizations, realized gross/net P&L, fees, win rate, average win/loss, profit factor, expectancy, drawdown, duration, symbol/strategy/account/direction/time breakdowns, and daily/weekly/yearly realized-equity OHLC candles. Open P&L is not estimated without market prices.
 3. **Strategy manager:** user-authored setup, entry, exit and risk rules, timeframes, checklists, tags, archive/restore and trade associations.
 4. **Daily journal:** pre-market plan, market context, execution review, mistakes, strengths, lessons, next-day plan, goals, tags and linked trades. Includes streak and journal-activity analytics.
 5. **Trading sessions:** Sydney, Tokyo, London and New York defaults; custom IANA-timezone schedules; open/closed state, next occurrence, overnight windows, daylight-saving transitions and overlaps.
