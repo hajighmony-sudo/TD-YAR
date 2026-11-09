@@ -84,10 +84,13 @@ fun AddTradeScreen(nav: NavController) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var buy by remember { mutableStateOf(true) }
-    var symbol by remember { mutableStateOf("EURUSD") }
-    var lot by remember { mutableStateOf(settings.defaultLot) }
+    var symbol by remember { mutableStateOf("") }
+    var lot by remember { mutableStateOf(settings.defaultLot.coerceAtLeast(0.0)) }
     var win by remember { mutableStateOf(true) }
-    var amount by remember { mutableStateOf(250.0) }
+    var amount by remember { mutableStateOf(0.0) }
+    var amountText by remember { mutableStateOf("") }
+    var resultChosen by remember { mutableStateOf(false) }
+    var saveMessage by remember { mutableStateOf("") }
     var usePriceCalculation by remember { mutableStateOf(false) }
     var entryText by remember { mutableStateOf("") }
     var exitText by remember { mutableStateOf("") }
@@ -109,9 +112,9 @@ fun AddTradeScreen(nav: NavController) {
     var plannedRiskText by remember { mutableStateOf("") }
     val parsedTradeDate = remember(tradeDateText) { JalaliCalendar.parseDateInput(tradeDateText) }
     val parsedTradeTime = remember(tradeTimeText) { runCatching { java.time.LocalTime.parse(tradeTimeText.trim()) }.getOrNull() }
-    var strategy by remember { mutableStateOf(AppState.strategies.firstOrNull { it.active }?.name ?: "") }
+    var strategy by remember { mutableStateOf("") }
     var strategyFollowed by remember { mutableStateOf<Boolean?>(null) }
-    var emotion by remember { mutableStateOf("آرام") }
+    var emotion by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf(setOf<String>()) }
 
     val standardFxSymbol = remember(symbol) { runCatching { FxInstrument.standard(symbol) }.isSuccess }
@@ -132,7 +135,7 @@ fun AddTradeScreen(nav: NavController) {
             )
         }.getOrNull()
     }
-    val signed = if (usePriceCalculation) priceResult?.netAccountCurrency?.toDouble() ?: 0.0 else if (win) amount else -amount
+    val signed = if (usePriceCalculation) priceResult?.netAccountCurrency?.toDouble() ?: 0.0 else if (!resultChosen) 0.0 else if (win) amount else -amount
     val animated by animateFloatAsState(signed.toFloat(), tween(450), label = "net")
     val resColor = if (signed >= 0.0) Tx.Green else Tx.Red
     val riskUsd = AppState.selectedAccount.startingBalance * settings.riskPercent / 100.0
