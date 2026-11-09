@@ -47,6 +47,10 @@ fun AccountsScreen(nav: NavController) {
     Page(title = "حساب‌های معاملاتی", onBack = { nav.popBackStack() }) {
         AppState.accounts.filterNot { it.archived }.forEach { account ->
             val selected = account.id == AppState.selectedAccountId
+            val accountTrades = AppState.trades.filter { it.accountId == account.id }
+            val accountNet = accountTrades.sumOf { it.pnl }
+            val accountWins = accountTrades.count { it.pnl > 0 }
+            val accountWinRate = if (accountTrades.isEmpty()) 0 else accountWins * 100 / accountTrades.size
             GlassCard(Modifier.fillMaxWidth(), border = if (selected) Tx.Gold else Color.White.copy(alpha = 0.12f)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -80,6 +84,25 @@ fun AccountsScreen(nav: NavController) {
                             }
                         }) {
                             Icon(Icons.Rounded.Archive, "بایگانی حساب", tint = Tx.Muted)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("معاملات ثبت‌شده", color = Tx.Muted, fontSize = 10.sp)
+                            Text(accountTrades.size.toString(), color = Tx.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("نرخ برد", color = Tx.Muted, fontSize = 10.sp)
+                            Text("$accountWinRate٪", color = Tx.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("سود/زیان ثبت‌شده", color = Tx.Muted, fontSize = 10.sp)
+                            Text(
+                                if (AppState.settings.hideBalance) "•••" else String.format(Locale.US, "%+,.2f", accountNet),
+                                color = if (accountNet >= 0) Tx.Green else Tx.Red,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                 }
