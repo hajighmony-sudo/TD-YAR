@@ -36,12 +36,13 @@ class SqliteStrategyRepository implements StrategyRepository {
   }) async {
     final rows = await txn.query(
       'strategies',
-      columns: ['id'],
-      where: 'LOWER(TRIM(name)) = ? AND id != ?',
-      whereArgs: [name.trim().toLowerCase(), excludingId ?? ''],
-      limit: 1,
+      columns: ['id', 'name'],
     );
-    if (rows.isNotEmpty) {
+    final normalized = name.trim().toLowerCase();
+    final duplicate = rows.any((row) =>
+        row['id'] != excludingId &&
+        (row['name'] as String).trim().toLowerCase() == normalized);
+    if (duplicate) {
       throw StateError('A strategy with this name already exists.');
     }
   }
