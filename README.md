@@ -13,11 +13,14 @@ The five core foundations now include:
 4. Daily journal with pre-market plan, market context, execution review, mistakes, strengths, lessons, next-day plan, goals, tags, and linked trades.
 5. Timezone-aware market sessions for Sydney, Tokyo, London, and New York, including open/closed status, next session times, custom schedules, overnight sessions, daylight-saving changes, and overlap windows.
 
-Additional foundations:
-- Personal risk profiles and per-trade/daily limit checks
-- Trading psychology journal and descriptive insights
-- Daily, weekly, monthly, and custom-range trading calendar
-- Local SQLite persistence and versioned migrations (schema version 5)
+Additional foundations (modules 6–11):
+- Trading psychology diary: mood, confidence, focus, stress, plan adherence, FOMO/revenge flags, emotion tags, notes, and descriptive outcome comparisons.
+- Risk management: reusable risk profiles, per-trade risk records, planned risk/reward calculations, daily loss and trade-count limit checks.
+- Trading calendar: daily, weekly, monthly, yearly, and custom-range summaries.
+- Learning library: text, image, video, and mixed resources, categories, tags, favorites, captions, source references, and strategy links. Media is referenced by local path.
+- Reports and portability: JSON snapshots, realization CSV export, SQLite backup and validated restore.
+- Core infrastructure: manual account profiles, key/value settings, audit-event history, repository contracts, and SQLite implementations.
+- Local SQLite persistence and versioned migrations (schema version 6).
 
 Explicitly out of scope:
 - Exchange, broker, or MetaTrader connections
