@@ -87,6 +87,7 @@ fun AppNav(startDestination: String = "home") {
                     composable("risk_lab") { RiskLabScreen(nav) }
                     composable("metatrader") { MetaTraderScreen(nav) }
                     composable("insights") { InsightsScreen(nav) }
+                    composable("psychology") { PsychologyScreen(nav) }
                     composable("tags") { TagsScreen(nav) }
                     composable("settings") { SettingsScreen(nav) }
                 }
