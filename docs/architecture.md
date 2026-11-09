@@ -2,96 +2,77 @@
 
 ## Product boundary
 
-TD-YAR is a manual-first trading journal and trader reflection companion. Users enter trades and all executions themselves. This phase has no exchange, broker, MetaTrader, market-data, or order-execution connection and provides no trading signals or investment recommendations.
+TD-YAR is a manual-first trading journal and trader reflection companion. Users enter trades and all executions themselves. There is no exchange, broker, MetaTrader, market-data, or order-execution connection and no trading signals or investment recommendations.
 
 ## Architecture rules
 
 - Domain logic is plain Dart and independent of Flutter widgets.
 - SQLite is the initial local-first persistence layer.
-- Repositories isolate storage from domain services.
+- Repository contracts isolate storage from domain services.
 - Calculations use only user-entered values and timezone database rules.
 - UI/UX is intentionally excluded from this phase.
 - Database changes use explicit, data-preserving migrations.
 
-## Five requested core foundations
+## Modules 1–5
 
-### 1. Manual trade journal
+1. **Manual trade journal:** long/short trade records, multiple entry/exit fills, FIFO matching, fee allocation, notes, tags, strategy links and history validation.
+2. **Performance analytics:** dated partial-exit realizations, realized gross/net P&L, fees, win rate, average win/loss, profit factor, expectancy, drawdown, duration and symbol/strategy/account/direction/time breakdowns. Open P&L is not estimated without market prices.
+3. **Strategy manager:** user-authored setup, entry, exit and risk rules, timeframes, checklists, tags, archive/restore and trade associations.
+4. **Daily journal:** pre-market plan, market context, execution review, mistakes, strengths, lessons, next-day plan, goals, tags and linked trades. Includes streak and journal-activity analytics.
+5. **Trading sessions:** Sydney, Tokyo, London and New York defaults; custom IANA-timezone schedules; open/closed state, next occurrence, overnight windows, daylight-saving transitions and overlaps.
 
-- `Trade` records symbol, long/short direction, account label, tags, notes, contract multiplier, and optional strategy association.
-- `TradeExecution` records multiple entry/exit fills, quantity, price, fee, timestamp, and per-fill notes.
-- Fills can be created, edited, and deleted. A mutation is accepted only when the complete resulting FIFO history remains valid.
-- Direction and contract multiplier cannot be changed after fills exist because doing so would reinterpret historical P&L.
-- Trades can be filtered by symbol, creation-date range, direction, strategy, and account.
-- `TradeCalculator` validates finite values and unique fill IDs, matches exits FIFO, allocates fees proportionally, and rejects over-closing.
+## Modules 6–11
 
-### 2. Performance analytics
+### 6. Trading psychology
 
-- `PerformanceAnalytics` creates a dated realization for every exit fill, including partial exits.
-- Date-range reports include only realizations in that range; each trade is aggregated once for trade-level statistics.
-- Metrics include realized gross/net P&L, allocated fees, win rate, average win/loss, profit factor, expectancy, maximum monetary drawdown over the chronological realization stream, average duration, and breakdowns by symbol, strategy, account, direction, weekday, and hour.
-- `PerformanceAnalyticsService` loads records through `TradeRepository`.
-- Open positions have no estimated unrealized P&L because there is no market-price feed.
+- Daily or trade-linked records store mood, confidence, focus, stress, plan adherence, FOMO/revenge flags, emotion tags and notes.
+- Ratings are validated in the 1–5 range. Records support create, update, lookup, date/trade filtering and delete.
+- Analytics summarize averages, mood frequency, plan adherence and counts, then compare linked realized outcomes.
+- Comparisons are descriptive only. They do not infer causation or assess mental health.
 
-### 3. Strategy manager
+### 7. Risk management
 
-- `Strategy` stores setup conditions, entry/exit/risk rules, timeframes, checklists, tags, market, description, and archive state.
-- `StrategyManagementService` validates strategy data and enforces case-insensitive unique names.
-- SQLite create/update checks uniqueness transactionally. Strategies can be listed, archived, restored, and deleted.
-- Trades can be associated with a strategy. Deleting a strategy clears its trade associations and strategy-owned attachment metadata without deleting trade history.
+- Reusable profiles store account-balance snapshots, currency, maximum per-trade risk percentage, daily loss percentage and trade-count limits.
+- Per-trade records store entry, stop, target, quantity, multiplier, planned monetary risk/reward, R:R and risk percentage.
+- Calculations validate long/short stop and target placement, finite positive inputs and profile bounds.
+- Daily checks count unique trades with entry fills on the selected local day and sum losing realized exits independently, so wins do not hide losses.
+- Results are informational bookkeeping guardrails, not trading instructions or recommendations.
 
-### 4. Daily journal
+### 8. Trading calendar
 
-- `JournalEntry` supports a daily title and notes plus pre-market plan, market context, execution review, mistakes, strengths, lessons, next-day plan, goals, tags, and linked trades.
-- Entries can be created, updated, retrieved by day or date range, and deleted.
-- `DailyJournalService` provides the UI-independent lifecycle and date-range operations.
-- `DailyJournalAnalytics` reports entry count, distinct active days, current/longest journaling streak, days with plans/reviews, unique linked trades, and tag frequency.
+- Supports day, Monday-to-Sunday week, month, year and custom date ranges.
+- Each day aggregates partial exits on their actual realization date, with trade count, wins/losses/breakeven, gross/net P&L, fees, best/worst result, average result, win rate, journal count and psychology-entry count.
+- Date ranges are inclusive by local calendar date.
 
-### 5. Trading sessions
+### 9. Learning library
 
-- `TradingSessionDefinition` stores session name, IANA timezone, local open/close times, weekdays, and enabled state.
-- Default definitions cover Sydney, Tokyo, London, and New York; users can add, edit, disable, and delete definitions.
-- `TradingSessions` computes current open/closed status, current and next occurrence times, and pairwise overlap windows.
-- The IANA timezone database is used for daylight-saving transitions and local session clocks. Overnight sessions are supported.
-- Session overlap intervals are returned in UTC instants, ready for conversion by the presentation layer.
+- Supports text-only, image-only, video-only and mixed text-plus-media resources.
+- Metadata includes title, body, caption, category, tags, favorite state, source URL and related strategy IDs.
+- Service validation enforces content-type requirements and HTTP(S) source links; optional strategy-repository validation checks linked strategy IDs.
+- Media is represented by a local path. File picking, copying, permissions and thumbnail generation belong to the future platform/presentation layer.
 
-## Additional domain modules
+### 10. Reports and portability
 
-### Risk management
+- CSV export lists realized exit records.
+- PDF export summarizes historical performance metrics.
+- Versioned JSON archive export covers trades with complete fill histories, daily journal, strategies, psychology entries, risk profiles and trade-risk records, learning resources, session definitions, accounts, settings, audit events and a performance snapshot.
+- Optional repository dependencies are reported in the archive manifest so a caller can identify omitted modules.
+- SQLite backup validates database integrity, schema version and required tables. Restore stages a candidate file and keeps a rollback copy until the restored database opens successfully.
+- JSON archive import and cloud synchronization are not included yet. Binary media files are referenced by local path and are not embedded in JSON exports.
 
-- `RiskProfile` stores account balance/currency and per-trade, daily-loss, and daily-trade-count limits.
-- `TradeRiskRecord` stores planned entry/stop/target, quantity, balance snapshot, monetary risk/reward, R:R, and account risk percentage.
-- `RiskCalculator` validates long/short price relationships, finite numeric inputs, and profile bounds.
-- `RiskManagementService` loads that day's realized exits and counts unique trades with entry fills that day. Daily losses are summed independently, so winning fills do not conceal losses.
-- Planned risk is checked against both the per-trade cap and remaining daily loss allowance. These are informational bookkeeping checks, not recommendations.
+### 11. Core infrastructure
 
-### Trading psychology
+- Manual trading accounts support currency, opening balance, notes and archive lifecycle.
+- Key/value settings provide local app configuration.
+- Append-only audit events store event/entity identifiers, JSON-object details and UTC timestamps.
+- Account names are unique case-insensitively; IDs, names, currencies and balances are validated.
+- These primitives do not imply broker or exchange account connectivity.
 
-- `PsychologyEntry` records mood, confidence, focus, stress, plan adherence, FOMO/revenge-trade flags, emotion tags, notes, and an optional trade link.
-- Ratings are constrained to 1–5 and entries can be created, edited, filtered, and deleted.
-- `PsychologyAnalytics` summarizes averages, mood counts, plan adherence, FOMO/revenge counts, and linked realized outcome comparisons.
-- These are descriptive correlations, not causal conclusions or mental-health assessments.
+## Persistence and migrations
 
-### Trading calendar
+SQLite schema version **6** includes trades, executions, journal entries, strategies, playbooks, attachments metadata, psychology entries, risk profiles, per-trade risk records, trading sessions, learning resources, manual trading accounts, app settings and audit events.
 
-- `TradingCalendar` builds daily summaries for day, Monday-to-Sunday week, month, or custom range.
-- Partial exits are assigned to their actual realization dates.
-- Day summaries include realized net/gross P&L, fees, wins/losses, best/worst trade, average trade P&L, win rate, journal count, and psychology-entry count.
-
-## Persistence
-
-SQLite schema version 5 includes:
-- `trades`
-- `trade_executions`
-- `journal_entries` (daily review fields, goals and tags)
-- `playbooks`
-- `attachments` (metadata only)
-- `strategies`
-- `risk_profiles`
-- `trade_risk_records`
-- `psychology_entries`
-- `trading_sessions`
-
-Migrations add the strategy association, advanced feature tables and indexes, execution notes, daily journal fields, and session definitions. Existing trade and journal records are preserved.
+Migrations preserve existing trade/journal data and add feature tables/indexes incrementally. Schema creation is centralized in `AppDatabase`.
 
 ## Validation
 
@@ -103,15 +84,4 @@ flutter analyze
 flutter test
 ```
 
-CI runs dependency resolution, static analysis, and tests on pull requests.
-
-
-## Modules 6–11
-- **Psychology:** mood, confidence, focus, stress, plan adherence, FOMO/revenge flags, emotion tags and linked outcomes. Date filters are applied consistently to diary entries and realized outcomes; insights remain descriptive only.
-- **Risk:** persisted risk profiles and per-trade records, planned risk/reward validation, daily loss and trade-count checks. These are bookkeeping guardrails, not recommendations.
-- **Calendar:** daily, Monday-to-Sunday weekly, monthly, yearly and custom-range summaries, with partial exits assigned to actual realization dates.
-- **Learning library:** text, image, video and mixed resources; category, caption, tags, favorites, source URL and related strategy IDs. Media references local paths; UI file capture remains separate.
-- **Reports/backup:** JSON export of trades with fills, journal entries, strategies and performance summary; CSV export by realized exit; PDF performance summaries, SQLite backup and signature-validated restore. Cloud sync is not included.
-- **Core infrastructure:** manual account profiles, app key/value settings and append-only audit events, behind repository contracts and SQLite implementations.
-
-SQLite schema version 6 adds learning resources, account profiles, settings and audit events without dropping prior records.
+Do not mark a build as verified until these commands have been run in a Flutter-enabled environment.
