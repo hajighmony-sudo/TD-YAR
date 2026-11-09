@@ -21,7 +21,7 @@ TD-YAR is a record-keeping, review and learning tool. Users manually enter all t
 10. **Reports and portability:** realization CSV, performance PDF, full local-data JSON archive and SQLite backup/restore with integrity/schema validation and rollback protection.
 11. **Core infrastructure:** manual account profiles, key/value settings and append-only audit-event history.
 
-SQLite schema version is **6**. The JSON archive includes complete fill histories and supported module data when their repositories are supplied. Media binaries are not embedded; paths remain local to the device. JSON archive import and cloud synchronization are not implemented.
+SQLite schema version is **7**. Trades reference manual accounts by `account_id`; existing account labels are migrated into local account records without losing their labels. JSON archives include complete fill histories, strategies, playbooks, attachments metadata and supported module data. Import validates the archive and inserts it in one transaction; conflicts fail rather than overwriting existing records. Media binaries are not embedded, so local paths are not portable by themselves. Cloud synchronization is not implemented.
 
 ## Explicitly out of scope
 - Exchange, broker or MetaTrader connections
@@ -34,6 +34,7 @@ SQLite schema version is **6**. The JSON archive includes complete fill historie
 
 - `lib/core/domain`: entities and deterministic calculations
 - `lib/core/data`: repository contracts and SQLite implementations
+- `lib/core/td_yar_services.dart`: shared composition root wiring all repositories and domain services
 - `lib/features`: reserved for future presentation modules
 - `test`: domain unit tests
 
