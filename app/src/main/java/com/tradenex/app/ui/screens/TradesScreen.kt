@@ -46,6 +46,8 @@ import com.tradenex.app.ui.theme.Tx
 @Composable
 fun TradesScreen(nav: NavController) {
     var filter by remember { mutableStateOf("ALL") }
+    var search by remember { mutableStateOf("") }
+    var range by remember { mutableStateOf("همه") }
     var editing by remember { mutableStateOf<Trade?>(null) }
     var deleting by remember { mutableStateOf<Trade?>(null) }
     var pnlText by remember { mutableStateOf("") }
@@ -98,17 +100,33 @@ fun TradesScreen(nav: NavController) {
     }
 
     val all = AppState.visibleTrades.sortedByDescending { it.epochDay }
-    val shown = all.filter {
-        when (filter) {
-            "BUY" -> it.buy
-            "SELL" -> !it.buy
-            "WIN" -> it.pnl > 0
-            "LOSS" -> it.pnl < 0
+    val today = AppState.today()
+    val rangeDays = when (range) { "۷ روز" -> 7L; "۳۰ روز" -> 30L; "۹۰ روز" -> 90L; else -> null }
+    val shown = all.filter { trade ->
+        val matchesFilter = when (filter) {
+            "BUY" -> trade.buy
+            "SELL" -> !trade.buy
+            "WIN" -> trade.pnl > 0
+            "LOSS" -> trade.pnl < 0
             else -> true
         }
+        val matchesSearch = search.isBlank() ||
+            trade.symbol.contains(search, ignoreCase = true) ||
+            trade.tradeName.contains(search, ignoreCase = true) ||
+            trade.strategy.contains(search, ignoreCase = true) ||
+            trade.notes.contains(search, ignoreCase = true)
+        val matchesRange = rangeDays == null || trade.epochDay >= today - rangeDays + 1
+        matchesFilter && matchesSearch && matchesRange
     }
+    val shownNet = shown.sumOf { it.pnl }
+    val wins = shown.count { it.pnl > 0 }
+    val losses = shown.count { it.pnl < 0 }
 
     Page(title = "ژورنال معاملات", onBack = { nav.popBackStack() }) {
+        TxField(search, { search = it }, "جست‌وجوی نماد، نام، استراتژی یا یادداشت")
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("همه", "۷ روز", "۳۰ روز", "۹۰ روز").forEach { TxChip(it, range == it, { range = it }) }
+        }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("ALL", "BUY", "SELL", "WIN", "LOSS").forEach {
                 TxChip(it, filter == it, { filter = it })
@@ -116,8 +134,8 @@ fun TradesScreen(nav: NavController) {
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("${shown.size} معامله", color = Tx.Muted, fontSize = 11.sp)
-                Text(Analytics.money(shown.sumOf { it.pnl }), color = if (shown.sumOf { it.pnl } >= 0) Tx.Green else Tx.Red, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text("${shown.size} معامله · $wins برد · $losses باخت", color = Tx.Muted, fontSize = 11.sp)
+                Text(Analytics.money(shownNet), color = if (shownNet >= 0) Tx.Green else Tx.Red, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { importLauncher.launch(arrayOf("text/*", "application/vnd.ms-excel", "*/*")) }) { Text("ورود CSV", color = Tx.Gold) }
@@ -127,7 +145,12 @@ fun TradesScreen(nav: NavController) {
         }
         if (shown.isEmpty()) {
             GlassCard(Modifier.fillMaxWidth()) {
-                Text("هنوز معامله‌ای برای این حساب ثبت نشده است.", color = Tx.Muted, modifier = Modifier.padding(18.dp))
+                Text(
+                    if (all.isEmpty()) "هنوز معامله‌ای برای این حساب ثبت نشده است."
+                    else "با این جست‌وجو یا فیلتر، معامله‌ای پیدا نشد.",
+                    color = Tx.Muted,
+                    modifier = Modifier.padding(18.dp),
+                )
             }
         }
         shown.forEach { trade ->
