@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.tradenex.app.data.Analytics
 import com.tradenex.app.data.AppState
+import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.data.JalaliCalendar
 import com.tradenex.app.data.Trade
 import com.tradenex.app.domain.FxInstrument
@@ -371,6 +372,7 @@ fun AddTradeScreen(nav: NavController) {
                         tradeName = tradeNameText.trim(),
                     ),
                     )
+                    NexNotify.tradeLogged(context, symbol)
                     if (settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     nav.popBackStack()
                 }
