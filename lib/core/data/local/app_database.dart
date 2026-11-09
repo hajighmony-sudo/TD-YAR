@@ -6,7 +6,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'td_yar.db';
-  static const int _databaseVersion = 7;
+  static const int _databaseVersion = 8;
 
   Database? _database;
 
@@ -88,6 +88,9 @@ class AppDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_trades_account_id_created ON trades(account_id, created_at)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_risk_profiles_account ON risk_profiles(account_id, updated_at)',
+    );
   }
 
   Future<void> _upgradeSchema(Database db, int oldVersion, int newVersion) async {
@@ -133,6 +136,14 @@ class AppDatabase {
     }
     if (oldVersion < 6) await _createFoundationTables(db);
     if (oldVersion < 7) await _upgradeTradeAccounts(db);
+    if (oldVersion < 8) {
+      await db.execute(
+        'ALTER TABLE risk_profiles ADD COLUMN account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_risk_profiles_account ON risk_profiles(account_id, updated_at)',
+      );
+    }
   }
 
   Future<void> _upgradeTradeAccounts(Database db) async {
@@ -202,6 +213,7 @@ class AppDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS risk_profiles (
         id TEXT PRIMARY KEY, name TEXT NOT NULL,
+        account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL,
         account_balance REAL NOT NULL CHECK (account_balance > 0),
         currency TEXT NOT NULL,
         max_risk_per_trade_percent REAL NOT NULL CHECK (max_risk_per_trade_percent >= 0),
