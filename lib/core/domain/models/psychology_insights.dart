@@ -13,10 +13,10 @@ class PsychologyInsights {
     this.followedPlanCount = 0,
     this.notFollowedPlanCount = 0,
     this.moodCounts = const {},
-    this.averagePnlWhenFomo = null,
-    this.averagePnlWithoutFomo = null,
-    this.averagePnlWhenRevengeTrade = null,
-    this.averagePnlWithoutRevengeTrade = null,
+    this.averagePnlWhenFomo,
+    this.averagePnlWithoutFomo,
+    this.averagePnlWhenRevengeTrade,
+    this.averagePnlWithoutRevengeTrade,
   });
 
   final int entryCount;
