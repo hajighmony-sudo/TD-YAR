@@ -127,8 +127,20 @@ jobs:
         run: flutter pub get
       - if: steps.detect.outputs.found == 'true'
         run: flutter analyze --no-fatal-infos
-      - if: steps.detect.outputs.found == 'true'
-        run: flutter test
+      - name: Run Flutter journal tests (retry transient asset downloads)
+        if: steps.detect.outputs.found == 'true'
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if flutter test; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Flutter tests failed on attempt $attempt; retrying after a short delay..."
+              sleep 15
+            fi
+          done
+          exit 1
 
   mql-files:
     # Cheap sanity check for the MetaTrader bridge Expert Advisors (they are compiled inside MetaEditor, not here).
