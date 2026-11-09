@@ -23,6 +23,8 @@ android {
 
     buildTypes {
         release {
+            // Signed with the debug key so the CI-built APK is installable (use your own keystore for Play Store).
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
