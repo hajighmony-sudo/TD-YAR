@@ -62,6 +62,8 @@ fun StrategiesScreen(nav: NavController) {
     var deletingStrategy by remember { mutableStateOf<Strategy?>(null) }
     var editName by remember { mutableStateOf("") }
     var editRules by remember { mutableStateOf("") }
+    var strategyQuery by remember { mutableStateOf("") }
+    var includeInactive by remember { mutableStateOf(false) }
     val n = AppState.visibleTrades.size
 
     Page(title = "استراتژی‌های من", onBack = { nav.popBackStack() }) {
@@ -90,7 +92,23 @@ fun StrategiesScreen(nav: NavController) {
             }
         }
 
-        AppState.strategies.forEachIndexed { idx, s ->
+        TxField(strategyQuery, { strategyQuery = it }, "جست‌وجوی نام یا قوانین استراتژی")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TxChip("فعال‌ها", !includeInactive, { includeInactive = false })
+            TxChip("همه استراتژی‌ها", includeInactive, { includeInactive = true })
+        }
+        val filteredStrategies = AppState.strategies.filter { strategy ->
+            (includeInactive || strategy.active) &&
+                (strategyQuery.isBlank() ||
+                    strategy.name.contains(strategyQuery, ignoreCase = true) ||
+                    strategy.rules.any { it.contains(strategyQuery, ignoreCase = true) })
+        }
+        if (filteredStrategies.isEmpty()) {
+            GlassCard(Modifier.fillMaxWidth()) {
+                Text("استراتژی‌ای با این فیلتر پیدا نشد.", color = Tx.Muted, modifier = Modifier.padding(14.dp))
+            }
+        }
+        filteredStrategies.forEachIndexed { idx, s ->
             Reveal(idx + 1) {
                 StrategyCard(s, n, onEdit = {
                     editingStrategy = s
