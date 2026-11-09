@@ -15,6 +15,7 @@ import com.tradenex.app.nav.AppNav
 import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.notifications.NotificationInbox
 import com.tradenex.app.reminders.ReminderScheduler
+import com.tradenex.app.reminders.SessionAlertScheduler
 import com.tradenex.app.ui.theme.ThemeController
 import com.tradenex.app.ui.theme.TradenexTheme
 
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
         EducationStore.initialize(applicationContext)
         EducationStore.migrateLegacy(AppState.lessons.toList())
         ReminderScheduler.schedule(applicationContext, AppState.settings.reminderOn, AppState.settings.reminderHour)
+        SessionAlertScheduler.schedule(applicationContext)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
