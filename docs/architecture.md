@@ -104,3 +104,14 @@ flutter test
 ```
 
 CI runs dependency resolution, static analysis, and tests on pull requests.
+
+
+## Modules 6–11
+- **Psychology:** mood, confidence, focus, stress, plan adherence, FOMO/revenge flags, emotion tags and linked outcomes. Date filters are applied consistently to diary entries and realized outcomes; insights remain descriptive only.
+- **Risk:** persisted risk profiles and per-trade records, planned risk/reward validation, daily loss and trade-count checks. These are bookkeeping guardrails, not recommendations.
+- **Calendar:** daily, Monday-to-Sunday weekly, monthly, yearly and custom-range summaries, with partial exits assigned to actual realization dates.
+- **Learning library:** text, image, video and mixed resources; category, caption, tags, favorites, source URL and related strategy IDs. Media references local paths; UI file capture remains separate.
+- **Reports/backup:** JSON export of trades with fills, journal entries, strategies and performance summary; CSV export by realized exit; SQLite backup and signature-validated restore. PDF and cloud sync are not included.
+- **Core infrastructure:** manual account profiles, app key/value settings and append-only audit events, behind repository contracts and SQLite implementations.
+
+SQLite schema version 6 adds learning resources, account profiles, settings and audit events without dropping prior records.
