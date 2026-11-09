@@ -11,13 +11,13 @@ void main() {
     final secondDay = DateTime.utc(2026, 5, 5, 12);
     final realizations = [
       TradeRealization(
-        tradeId: 'trade-1', symbol: 'EURUSD',
+        tradeId: 'trade-1', executionId: 'exit-1', symbol: 'EURUSD',
         direction: TradeDirection.long, strategyId: 'strategy-1',
         closedAt: firstDay, netPnl: 8, grossPnl: 9, fees: 1,
         closedQuantity: 1, duration: const Duration(hours: 1),
       ),
       TradeRealization(
-        tradeId: 'trade-1', symbol: 'EURUSD',
+        tradeId: 'trade-1', executionId: 'exit-2', symbol: 'EURUSD',
         direction: TradeDirection.long, strategyId: 'strategy-1',
         closedAt: secondDay, netPnl: -3, grossPnl: -2, fees: 1,
         closedQuantity: 1, duration: const Duration(days: 1, hours: 1),
