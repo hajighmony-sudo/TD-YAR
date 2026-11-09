@@ -99,6 +99,7 @@ void main() {
     );
     expect(result.plannedRiskWithinLimit, isFalse);
     expect(result.dailyLossWithinLimit, isTrue);
+    expect(result.plannedRiskWithinDailyAllowance, isTrue);
     expect(result.remainingTradeSlots, 3);
   });
   test('partial exits are assigned to their own realization dates', () {
