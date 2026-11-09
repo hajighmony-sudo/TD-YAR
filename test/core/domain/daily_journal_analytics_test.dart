@@ -12,6 +12,8 @@ void main() {
     String review = '',
     List<String> tags = const [],
     List<String> trades = const [],
+    List<String> goals = const [],
+    String mistakes = '',
   }) => JournalEntry(
         id: id,
         entryDate: date,
@@ -20,6 +22,8 @@ void main() {
         preMarketPlan: plan,
         executionReview: review,
         tags: tags,
+        goals: goals,
+        mistakes: mistakes,
         linkedTradeIds: trades,
         createdAt: date,
         updatedAt: date,
@@ -30,11 +34,12 @@ void main() {
       entry(
         id: 'j1', date: base, plan: 'Plan A',
         tags: const ['discipline', 'review'], trades: const ['t1'],
-        
+        goals: const ['follow the plan'], mistakes: 'entered too early',
       ),
       entry(
         id: 'j2', date: base.add(const Duration(hours: 3)),
         review: 'Review A', tags: const ['discipline'], trades: const ['t1', 't2'],
+        goals: const ['avoid overtrading'],
       ),
       entry(
         id: 'j3', date: base.add(const Duration(days: 1)),
@@ -58,6 +63,9 @@ void main() {
     expect(insights.daysWithPreMarketPlan, 2);
     expect(insights.daysWithExecutionReview, 2);
     expect(insights.linkedTradeCount, 2);
+    expect(insights.entriesWithGoals, 2);
+    expect(insights.goalCount, 2);
+    expect(insights.entriesWithMistakes, 1);
     expect(insights.tagCounts['discipline'], 2);
   });
 
