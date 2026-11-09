@@ -2,6 +2,7 @@ package com.tradenex.app.notifications
 
 import android.Manifest
 import android.app.Notification
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -45,6 +46,36 @@ object NexNotify {
     fun sessionReminder(context: Context, sessionName: String) =
         show(context, NotifyCategory.SESSION, "یادآوری سشن", "سشن $sessionName طبق ساعت انتخابی تو شروع شده است. وضعیت و یادداشت‌ها را بررسی کن.", "sessions",
             listOf("مشاهده سشن‌ها" to "OPEN"))
+
+    fun scheduleNewsReminder(context: Context, eventId: Int, title: String, currency: String, atMillis: Long): Boolean {
+        if (atMillis <= System.currentTimeMillis()) return false
+        val alarmIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "com.tradenex.app.NEWS_REMINDER"
+            putExtra("action", "NEWS_REMINDER")
+            putExtra("notification_id", eventId)
+            putExtra("title", title)
+            putExtra("currency", currency)
+        }
+        val pending = PendingIntent.getBroadcast(
+            context, eventId, alarmIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pending)
+        return true
+    }
+
+    fun cancelNewsReminder(context: Context, eventId: Int) {
+        val alarmIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "com.tradenex.app.NEWS_REMINDER"
+        }
+        val pending = PendingIntent.getBroadcast(
+            context, eventId, alarmIntent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+        ) ?: return
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
+        pending.cancel()
+    }
 
     fun sessionState(context: Context, sessionName: String, isOpen: Boolean) {
         val title = if (isOpen) "سشن $sessionName باز شد" else "سشن $sessionName بسته شد"
