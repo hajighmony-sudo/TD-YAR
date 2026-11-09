@@ -5,13 +5,11 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  exclude:
+    - flutter_fx/**
 
 linter:
   rules:
     avoid_print: true
     prefer_final_locals: true
     always_declare_return_types: true
-
-analyzer:
-  exclude:
-    - flutter_fx/**
