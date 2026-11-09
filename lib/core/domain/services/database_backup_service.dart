@@ -6,30 +6,14 @@ import '../../data/local/app_database.dart';
 
 /// Creates and restores local SQLite snapshots.
 ///
-/// Backup/restore is intentionally an exclusive operation: the singleton
-/// database is closed while the file is copied or replaced. Callers should
-/// pause repository writes for the duration of either operation.
+/// Backup/restore is an exclusive operation. Pause repository writes while it
+/// runs; the singleton database is briefly closed during file replacement.
 class DatabaseBackupService {
   DatabaseBackupService({AppDatabase? database})
       : _db = database ?? AppDatabase.instance;
 
   final AppDatabase _db;
-
   static const int _currentSchemaVersion = 6;
-  static const List<String> _requiredTables = [
-    'trades',
-    'trade_executions',
-    'journal_entries',
-    'strategies',
-    'psychology_entries',
-    'risk_profiles',
-    'trade_risk_records',
-    'trading_sessions',
-    'learning_resources',
-    'trading_accounts',
-    'app_settings',
-    'audit_events',
-  ];
 
   Future<File> createBackup(String destinationPath) async {
     if (!destinationPath.toLowerCase().endsWith('.db')) {
@@ -43,16 +27,17 @@ class DatabaseBackupService {
     }
 
     final database = await _db.database;
-    // Checkpoint WAL pages before copying the main database file.
     await database.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
     await _db.close();
-
-    await target.parent.create(recursive: true);
-    if (await target.exists()) await target.delete();
-    final backup = await source.copy(target.path);
-    await _db.database; // Reopen for subsequent repository operations.
-    await _validateBackup(backup);
-    return backup;
+    try {
+      await target.parent.create(recursive: true);
+      if (await target.exists()) await target.delete();
+      final backup = await source.copy(target.path);
+      await _validateBackup(backup);
+      return backup;
+    } finally {
+      await _db.database;
+    }
   }
 
   Future<void> restoreBackup(String backupPath) async {
@@ -60,11 +45,9 @@ class DatabaseBackupService {
     if (!await source.exists()) {
       throw FileSystemException('Backup file not found', backupPath);
     }
-    if (source.lengthSync() < 100) {
+    if (await source.length() < 100) {
       throw const FormatException('Backup file is too small to be SQLite.');
     }
-
-    // Validate the candidate before touching the current database.
     await _validateBackup(source);
 
     final livePath = await _db.databaseFile;
@@ -79,9 +62,7 @@ class DatabaseBackupService {
       await source.copy(staged.path);
       if (await live.exists()) await live.rename(rollback.path);
       await staged.rename(live.path);
-
-      // Opening runs the normal versioned migrations when needed.
-      await _db.database;
+      await _db.database; // Runs supported versioned migrations.
       if (await rollback.exists()) await rollback.delete();
     } catch (_) {
       if (await staged.exists()) await staged.delete();
@@ -113,11 +94,29 @@ class DatabaseBackupService {
         throw FormatException('Unsupported database schema version: $version.');
       }
 
+      final required = <String>[
+        'trades',
+        'trade_executions',
+        'journal_entries',
+        if (version >= 2) ...[
+          'strategies',
+          'risk_profiles',
+          'trade_risk_records',
+          'psychology_entries',
+        ],
+        if (version >= 5) 'trading_sessions',
+        if (version >= 6) ...[
+          'learning_resources',
+          'trading_accounts',
+          'app_settings',
+          'audit_events',
+        ],
+      ];
       final rows = await candidate.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table'",
       );
       final tables = rows.map((row) => row['name'] as String).toSet();
-      final missing = _requiredTables.where((name) => !tables.contains(name));
+      final missing = required.where((name) => !tables.contains(name));
       if (missing.isNotEmpty) {
         throw FormatException(
           'Backup is missing required tables: ${missing.join(', ')}.',
