@@ -21,6 +21,7 @@ class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
     if (!account.initialBalance.isFinite || account.initialBalance < 0) {
       throw ArgumentError.value(account.initialBalance, 'initialBalance');
     }
+    final accountValues = account.toMap()..['name'] = account.name.trim();
     final db = await _db.database;
     await db.transaction((txn) async {
       final duplicate = await txn.query(
@@ -43,13 +44,13 @@ class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
       if (existing.isEmpty) {
         await txn.insert(
           'trading_accounts',
-          account.toMap(),
+          accountValues,
           conflictAlgorithm: ConflictAlgorithm.abort,
         );
       } else {
         await txn.update(
           'trading_accounts',
-          account.toMap(),
+          accountValues,
           where: 'id = ?',
           whereArgs: [account.id],
         );
