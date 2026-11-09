@@ -19,7 +19,7 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 
 - `Trade` records symbol, long/short direction, account label, tags, notes, contract multiplier, and optional strategy association.
 - `TradeExecution` records multiple entry/exit fills, quantity, price, fee, timestamp, and per-fill notes.
-- Fills can be created, edited, and deleted. A mutation is accepted only when the complete resulting history remains valid.
+- Fills can be created, edited, and deleted, with per-fill notes. A mutation is accepted only when the complete resulting history remains valid.
 - Direction and contract multiplier cannot be changed after fills exist because doing so would reinterpret historical P&L.
 - Trades can be filtered by symbol, creation-date range, direction, strategy, and account.
 - `TradeCalculator` validates finite values and unique fill IDs, matches exits FIFO, allocates fees proportionally, and rejects over-closing.
@@ -28,7 +28,7 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 
 - `PerformanceAnalytics` creates a dated realization for every exit fill, including partial exits.
 - Date-range reports include only realizations in that range; each trade is aggregated once for trade-level statistics.
-- Metrics include realized gross/net P&L, allocated fees, win rate, average win/loss, profit factor, expectancy, maximum monetary drawdown over the chronological realization stream, average duration, and breakdowns by symbol, strategy, weekday, and hour.
+- Metrics include realized gross/net P&L, allocated fees, win rate, average win/loss, profit factor, expectancy, maximum monetary drawdown over the chronological realization stream, average duration, and breakdowns by symbol, strategy, account, direction, weekday, and hour.
 - `PerformanceAnalyticsService` loads data through `TradeRepository`.
 - Open positions have no estimated unrealized P&L because there is no market-price feed.
 
@@ -38,7 +38,7 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 - `TradeRiskRecord` stores planned entry/stop/target, quantity, balance snapshot, monetary risk/reward, R:R, and account risk percentage.
 - Risk calculations validate long/short stop and target placement, finite numeric inputs, and profile bounds.
 - Daily loss checks sum negative realized fills independently; winning fills do not offset losing fills for limit evaluation.
-- A planned trade is checked against both the per-trade cap and remaining daily loss allowance.
+- The daily service loads the selected day's exit realizations and counts unique trades with entry fills that day. A planned trade is checked against both the per-trade cap and remaining daily loss allowance.
 - These are user-configured bookkeeping checks, not investment recommendations.
 
 ### 4. Strategy manager
