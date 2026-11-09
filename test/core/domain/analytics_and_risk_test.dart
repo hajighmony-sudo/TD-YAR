@@ -60,6 +60,8 @@ void main() {
     expect(report.winRate, 100);
     expect(report.netPnl, 10);
     expect(report.byStrategy.single.key, 's1');
+    expect(report.byAccount.single.key, 'بدون حساب');
+    expect(report.byDirection.single.key, 'long');
   });
 
   test('risk calculator computes planned risk and reward for a long', () {
