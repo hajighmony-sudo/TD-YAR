@@ -26,6 +26,7 @@ import com.tradenex.app.ui.screens.CalendarScreen
 import com.tradenex.app.ui.screens.CalculatorScreen
 import com.tradenex.app.ui.screens.RiskLabScreen
 import com.tradenex.app.ui.screens.MetaTraderScreen
+import com.tradenex.app.ui.screens.InsightsScreen
 import com.tradenex.app.ui.screens.EducationScreen
 import com.tradenex.app.ui.screens.HomeScreen
 import com.tradenex.app.ui.screens.MoreScreen
@@ -84,6 +85,7 @@ fun AppNav(startDestination: String = "home") {
                     composable("calculator") { CalculatorScreen(nav) }
                     composable("risk_lab") { RiskLabScreen(nav) }
                     composable("metatrader") { MetaTraderScreen(nav) }
+                    composable("insights") { InsightsScreen(nav) }
                     composable("tags") { TagsScreen(nav) }
                     composable("settings") { SettingsScreen(nav) }
                 }

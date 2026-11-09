@@ -1,0 +1,22 @@
+package com.tradenex.app.core
+
+import com.tradenex.app.data.Trade
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class InsightsTest {
+    private fun t(id: Long, pnl: Double, day: Long = id, sym: String = "EURUSD") =
+        Trade(id = id, symbol = sym, buy = true, lot = 1.0, pnl = pnl, strategy = "S", tags = listOf("a"), epochDay = day, emotion = "calm")
+
+    @Test fun streaksAndHeadline() {
+        val l = listOf(t(1, 10.0), t(2, 5.0), t(3, -4.0), t(4, -6.0), t(5, -1.0), t(6, 20.0))
+        val s = Insights.streaks(l)
+        assertEquals(2, s.bestWin); assertEquals(3, s.worstLoss); assertEquals(1, s.current)
+        assertEquals(35.0 / 11.0, Insights.headline(l).profitFactor, 1e-9)
+    }
+
+    @Test fun groupsBySymbolSortedByPnl() {
+        val g = Insights.bySymbol(listOf(t(1, 5.0, sym = "xauusd"), t(2, -9.0, sym = "EURUSD"), t(3, 7.0, sym = "XAUUSD")))
+        assertEquals("XAUUSD", g[0].key); assertEquals(12.0, g[0].pnl, 1e-9); assertEquals(2, g[0].count)
+    }
+}

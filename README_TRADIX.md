@@ -88,3 +88,8 @@ Settings > آیکون‌ها lets the user pick one of 12 launcher icons (adapti
 
 ## Interactive globe (Sessions)
 `ui/components/Globe.kt` + `WorldGeo.kt` + `assets/world_borders.bin`: real country borders (simplified public-domain data), drag to rotate, auto-spin after 2.5 s idle, countries of open sessions glow in the session colour, animated orbits connect overlapping sessions, tap a country for its name/session.
+
+## MetaTrader & Insights (new)
+- **متاترید** (More menu): direct Wi-Fi bridge via the `metatrader/TradixBridge.mq4|mq5` Expert Advisors, MT4/MT5 HTML/CSV report import, and MetaApi cloud import. Trades are de-duplicated by ticket. Limits: the EAs have not been compiled in MetaEditor, the bridge only runs while its screen is open on the same network, MetaApi needs your own account/token.
+- **بینش‌ها** (More menu): profit factor, expectancy, payoff, streaks, and P&L breakdowns by symbol, weekday, hour, strategy, emotion, tag and side.
+- Code is verified only by CI; it was not compiled locally.

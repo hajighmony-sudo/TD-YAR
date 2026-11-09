@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.BarChart
@@ -105,6 +106,7 @@ fun MoreScreen(nav: NavController) {
         MenuItem("تقویم و اخبار", "معاملات + فارکس فکتوری", Icons.Rounded.CalendarMonth, "calendar", Tx.Green),
         MenuItem("ماشین حساب", "محاسبات عمومی، لات و ریسک فارکس", Icons.Rounded.Calculate, "calculator", Tx.Blue),
         MenuItem("متاترید", "اتصال مستقیم، گزارش و MetaApi", Icons.Rounded.SwapHoriz, "metatrader", Tx.Blue),
+        MenuItem("بینش‌ها", "نماد، روز، ساعت، احساس، استریک", Icons.Rounded.Insights, "insights", Tx.Green),
         MenuItem("آزمایشگاه ریسک", "کِلی، مونت‌کارلو، افت سرمایه، R", Icons.Rounded.Science, "risk_lab", Tx.Red),
         MenuItem("# هشتگ‌ها", "برچسب‌گذاری معامله‌ها", Icons.Rounded.Tag, "tags", Tx.Purple),
         MenuItem("TX AI", "شخصیت معاملاتی و مربی عملکرد", Icons.Rounded.AutoAwesome, "tx_ai", Tx.Gold),
