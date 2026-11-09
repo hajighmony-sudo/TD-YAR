@@ -2,6 +2,7 @@ class RiskProfile {
   const RiskProfile({
     required this.id,
     required this.name,
+    this.accountId,
     required this.accountBalance,
     required this.currency,
     required this.maxRiskPerTradePercent,
@@ -13,6 +14,7 @@ class RiskProfile {
 
   final String id;
   final String name;
+  final String? accountId;
   final double accountBalance;
   final String currency;
   final double maxRiskPerTradePercent;
@@ -22,7 +24,7 @@ class RiskProfile {
   final DateTime updatedAt;
 
   Map<String, Object?> toMap() => {
-        'id': id, 'name': name, 'account_balance': accountBalance,
+        'id': id, 'name': name, 'account_id': accountId, 'account_balance': accountBalance,
         'currency': currency,
         'max_risk_per_trade_percent': maxRiskPerTradePercent,
         'max_daily_loss_percent': maxDailyLossPercent,
@@ -34,6 +36,7 @@ class RiskProfile {
   factory RiskProfile.fromMap(Map<String, Object?> map) => RiskProfile(
         id: map['id'] as String,
         name: map['name'] as String,
+        accountId: map['account_id'] as String?,
         accountBalance: (map['account_balance'] as num).toDouble(),
         currency: map['currency'] as String,
         maxRiskPerTradePercent:
