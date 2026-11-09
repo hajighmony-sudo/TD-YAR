@@ -227,7 +227,7 @@ fun StrategiesScreen(nav: NavController) {
                     }
                     editAttachments.forEach { file ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f).clickable { runCatching { openStrategyAttachment(context, file) } })
                             Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { editAttachments = editAttachments.filterNot { it.id == file.id } })
                         }
                     }
