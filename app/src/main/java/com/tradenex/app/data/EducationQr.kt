@@ -28,6 +28,7 @@ object EducationQr {
     private const val ENCRYPTED_PREFIX = "TRADIX-LESSON-2:"
     private const val ITERATIONS = 120_000
     private const val MAX_PAYLOAD_BYTES = 2800
+    private const val MAX_TEXT_BYTES = 48 * 1024
 
     private fun lessonJson(lesson: EducationLesson): ByteArray = JSONObject().apply {
         put("title", lesson.title)
@@ -38,6 +39,20 @@ object EducationQr {
         })
     }.toString().toByteArray(Charsets.UTF_8)
 
+    private fun readLimited(input: InputStream): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(4096)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            total += count
+            require(total <= MAX_TEXT_BYTES) { "متن QR بیش از حد بزرگ است؛ از بسته .tx استفاده کن." }
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
+    }
+
     private fun deriveKey(password: String, salt: ByteArray): SecretKeySpec {
         val spec = PBEKeySpec(password.toCharArray(), salt, ITERATIONS, 256)
         return SecretKeySpec(SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded, "AES")
@@ -45,8 +60,10 @@ object EducationQr {
 
     fun encode(lesson: EducationLesson, password: String): String {
         require(password.isNotBlank()) { "برای رمزنگاری QR باید رمز تعیین کنی." }
+        val rawText = lessonJson(lesson)
+        require(rawText.size <= MAX_TEXT_BYTES) { "متن درس برای QR بیش از حد طولانی است؛ از بسته .tx استفاده کن." }
         val compressed = ByteArrayOutputStream().use { out ->
-            GZIPOutputStream(out).use { it.write(lessonJson(lesson)) }
+            GZIPOutputStream(out).use { it.write(rawText) }
             out.toByteArray()
         }
         val random = SecureRandom()
@@ -101,7 +118,7 @@ object EducationQr {
                 } catch (_: Exception) {
                     throw IllegalArgumentException("رمز QR اشتباه است یا داده آسیب دیده است.")
                 }
-                GZIPInputStream(ByteArrayInputStream(compressed)).use { it.readBytes() }
+                GZIPInputStream(ByteArrayInputStream(compressed)).use(::readLimited)
             }
             result.startsWith(LEGACY_PREFIX) -> {
                 val compressed = Base64.getUrlDecoder().decode(result.removePrefix(LEGACY_PREFIX))
