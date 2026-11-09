@@ -103,6 +103,8 @@ class TdYarServices {
       learningRepository: learning,
       tradingSessionRepository: sessions,
       infrastructureRepository: infrastructure,
+      playbookRepository: playbooks,
+      database: db,
     );
 
     return TdYarServices._(
