@@ -11,13 +11,14 @@ class DailyJournalAnalytics {
     final dayKeys = <int>{};
     final tagCounts = <String, int>{};
     final linkedTrades = <String>{};
-    var daysWithPlan = 0;
-    var daysWithReview = 0;
+    final daysWithPlan = <int>{};
+    final daysWithReview = <int>{};
 
     for (final entry in entries) {
       dayKeys.add(_dateKey(entry.entryDate));
-      if (entry.preMarketPlan.trim().isNotEmpty) daysWithPlan++;
-      if (entry.executionReview.trim().isNotEmpty) daysWithReview++;
+      final key = _dateKey(entry.entryDate);
+      if (entry.preMarketPlan.trim().isNotEmpty) daysWithPlan.add(key);
+      if (entry.executionReview.trim().isNotEmpty) daysWithReview.add(key);
       linkedTrades.addAll(entry.linkedTradeIds);
       for (final tag in entry.tags) {
         final normalized = tag.trim();
@@ -47,7 +48,7 @@ class DailyJournalAnalytics {
 
     final today = DateTime(asOfDate.year, asOfDate.month, asOfDate.day);
     final todayKey = _dateKey(today);
-    final yesterday = today.subtract(const Duration(days: 1));
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
     final anchorKey = dayKeys.contains(todayKey)
         ? todayKey
         : _dateKey(yesterday);
@@ -56,7 +57,7 @@ class DailyJournalAnalytics {
       var cursor = _fromDateKey(anchorKey);
       while (dayKeys.contains(_dateKey(cursor))) {
         currentStreak++;
-        cursor = cursor.subtract(const Duration(days: 1));
+        cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
       }
     }
 
@@ -71,8 +72,8 @@ class DailyJournalAnalytics {
       distinctDays: dayKeys.length,
       currentStreak: currentStreak,
       longestStreak: longest,
-      daysWithPreMarketPlan: daysWithPlan,
-      daysWithExecutionReview: daysWithReview,
+      daysWithPreMarketPlan: daysWithPlan.length,
+      daysWithExecutionReview: daysWithReview.length,
       linkedTradeCount: linkedTrades.length,
       tagCounts: Map.unmodifiable({
         for (final entry in orderedTags) entry.key: entry.value,
