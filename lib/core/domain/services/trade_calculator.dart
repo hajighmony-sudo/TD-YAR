@@ -26,7 +26,14 @@ class TradeCalculator {
     }
 
     final sorted = [...executions]
-      ..sort((a, b) => a.executedAt.compareTo(b.executedAt));
+      ..sort((a, b) {
+        final timeOrder = a.executedAt.compareTo(b.executedAt);
+        if (timeOrder != 0) return timeOrder;
+        if (a.kind != b.kind) {
+          return a.kind == ExecutionKind.entry ? -1 : 1;
+        }
+        return a.id.compareTo(b.id);
+      });
 
     final openLots = Queue<_OpenLot>();
     var totalFees = 0.0;
@@ -38,12 +45,16 @@ class TradeCalculator {
 
     for (final execution in sorted) {
       if (execution.tradeId != trade.id) {
-        throw ArgumentError('Every execution must belong to the supplied trade.');
+        throw ArgumentError(
+          'Every execution must belong to the supplied trade.',
+        );
       }
       if (execution.quantity <= 0 ||
           execution.price <= 0 ||
           execution.fee < 0) {
-        throw ArgumentError('Quantity and price must be positive; fee cannot be negative.');
+        throw ArgumentError(
+          'Quantity and price must be positive; fee cannot be negative.',
+        );
       }
 
       totalFees += execution.fee;
@@ -62,7 +73,9 @@ class TradeCalculator {
       var remainingExitQuantity = execution.quantity;
       while (remainingExitQuantity > _epsilon) {
         if (openLots.isEmpty) {
-          throw StateError('Exit quantity exceeds the open quantity for this trade.');
+          throw StateError(
+            'Exit quantity exceeds the open quantity for this trade.',
+          );
         }
 
         final lot = openLots.first;
