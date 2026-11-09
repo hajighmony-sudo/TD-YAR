@@ -18,7 +18,7 @@ Additional foundations (modules 6–11):
 - Risk management: reusable risk profiles, per-trade risk records, planned risk/reward calculations, daily loss and trade-count limit checks.
 - Trading calendar: daily, weekly, monthly, yearly, and custom-range summaries.
 - Learning library: text, image, video, and mixed resources, categories, tags, favorites, captions, source references, and strategy links. Media is referenced by local path.
-- Reports and portability: JSON snapshots, realization CSV export, SQLite backup and validated restore.
+- Reports and portability: JSON snapshots, realization CSV export, PDF performance reports, SQLite backup and validated restore.
 - Core infrastructure: manual account profiles, key/value settings, audit-event history, repository contracts, and SQLite implementations.
 - Local SQLite persistence and versioned migrations (schema version 6).
 
