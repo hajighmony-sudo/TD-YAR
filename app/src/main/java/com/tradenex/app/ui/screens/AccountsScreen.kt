@@ -38,6 +38,7 @@ import java.util.Locale
 @Composable
 fun AccountsScreen(nav: NavController) {
     var creating by remember { mutableStateOf(false) }
+    var editingAccount by remember { mutableStateOf<TradingAccount?>(null) }
     var name by remember { mutableStateOf("") }
     var broker by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf("") }
@@ -80,6 +81,15 @@ fun AccountsScreen(nav: NavController) {
                                 fontWeight = FontWeight.Bold,
                             )
                         }
+                        TextButton(onClick = {
+                            editingAccount = account
+                            name = account.name
+                            broker = account.broker
+                            currency = account.baseCurrency
+                            type = account.type
+                            balance = account.startingBalance.toString()
+                            formError = ""
+                        }) { Text("ویرایش", color = Tx.Gold) }
                         if (!selected) {
                             TextButton(onClick = {
                                 AppState.selectedAccountId = account.id
@@ -124,16 +134,17 @@ fun AccountsScreen(nav: NavController) {
         }
         GoldButton("افزودن حساب جدید") {
             name = ""; broker = ""; currency = ""; type = ""; balance = ""; formError = ""
+            editingAccount = null
             creating = true
         }
         Spacer(Modifier.height(12.dp))
     }
 
-    if (creating) {
+    if (creating || editingAccount != null) {
         AlertDialog(
-            onDismissRequest = { creating = false },
+            onDismissRequest = { creating = false; editingAccount = null },
             containerColor = Tx.Dialog,
-            title = { Text("حساب جدید", color = Tx.Text) },
+            title = { Text(if (editingAccount == null) "حساب جدید" else "ویرایش حساب", color = Tx.Text) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TxField(name, { name = it }, "نام حساب")
@@ -160,12 +171,29 @@ fun AccountsScreen(nav: NavController) {
                         currency.isBlank() -> formError = "ارز پایه حساب را وارد کن."
                         amount == null || amount <= 0.0 || !amount.isFinite() -> formError = "بالانس اولیه معتبر و بزرگ‌تر از صفر وارد کن."
                         else -> {
-                            val id = "account-${System.currentTimeMillis()}"
-                            AppState.accounts.add(TradingAccount(id, name.trim(), broker.trim(), type, currency, amount!!))
-                            AppState.selectedAccountId = id
-                            AppState.settings = AppState.settings.copy(startBalance = amount)
+                            val existing = editingAccount
+                            if (existing == null) {
+                                val id = "account-${System.currentTimeMillis()}"
+                                AppState.accounts.add(TradingAccount(id, name.trim(), broker.trim(), type, currency, amount!!))
+                                AppState.selectedAccountId = id
+                            } else {
+                                val index = AppState.accounts.indexOfFirst { it.id == existing.id }
+                                if (index >= 0) {
+                                    AppState.accounts[index] = existing.copy(
+                                        name = name.trim(),
+                                        broker = broker.trim(),
+                                        type = type,
+                                        baseCurrency = currency,
+                                        startingBalance = amount!!,
+                                    )
+                                }
+                            }
+                            if (AppState.selectedAccountId == editingAccount?.id || editingAccount == null) {
+                                AppState.settings = AppState.settings.copy(startBalance = amount)
+                            }
                             AppState.persist()
                             creating = false
+                            editingAccount = null
                         }
                     }
                 }) { Text("ایجاد حساب", color = Tx.Gold) }
