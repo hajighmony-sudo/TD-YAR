@@ -1,0 +1,2 @@
+import '../../domain/models/learning_resource.dart';
+abstract interface class LearningRepository {Future<void> create(LearningResource resource);Future<void> update(LearningResource resource);Future<LearningResource?> getById(String id);Future<List<LearningResource>> list({String? query,String? category,LearningContentType? type,List<String>? tags,bool? favoritesOnly});Future<void> delete(String id);}
