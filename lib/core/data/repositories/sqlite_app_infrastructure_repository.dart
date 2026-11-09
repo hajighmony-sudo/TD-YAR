@@ -102,9 +102,39 @@ class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
 
   @override
   Future<void> deleteAccount(String id) async {
-    await (await _db.database).delete(
-      'trading_accounts', where: 'id = ?', whereArgs: [id],
-    );
+    final db = await _db.database;
+    await db.transaction((txn) async {
+      final linkedTrades = await txn.query(
+        'trades',
+        columns: ['id'],
+        where: 'account_id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (linkedTrades.isNotEmpty) {
+        throw StateError(
+          'Cannot delete an account with linked trades; archive it instead.',
+        );
+      }
+      final linkedProfiles = await txn.query(
+        'risk_profiles',
+        columns: ['id'],
+        where: 'account_id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (linkedProfiles.isNotEmpty) {
+        throw StateError(
+          'Cannot delete an account with linked risk profiles; archive it instead.',
+        );
+      }
+      final changed = await txn.delete(
+        'trading_accounts',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (changed == 0) throw StateError('Trading account not found: $id');
+    });
   }
 
   @override
