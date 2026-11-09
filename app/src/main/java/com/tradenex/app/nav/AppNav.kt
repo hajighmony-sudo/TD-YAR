@@ -31,6 +31,7 @@ import com.tradenex.app.ui.screens.EducationScreen
 import com.tradenex.app.ui.screens.HomeScreen
 import com.tradenex.app.ui.screens.MoreScreen
 import com.tradenex.app.ui.screens.PerformanceScreen
+import com.tradenex.app.ui.screens.PsychologyScreen
 import com.tradenex.app.ui.screens.SessionsScreen
 import com.tradenex.app.ui.screens.SettingsScreen
 import com.tradenex.app.ui.screens.StrategiesScreen
