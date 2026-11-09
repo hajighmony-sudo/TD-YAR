@@ -21,6 +21,12 @@ object Insights {
         return m.map { Group(it.key, it.value[0].toInt(), it.value[1], it.value[2].toInt()) }.sortedByDescending { it.pnl }
     }
 
+    fun byMonth(t: List<Trade>): List<Group> =
+        groupBy(t) {
+            val date = LocalDate.ofEpochDay(it.epochDay)
+            listOf("%04d-%02d".format(java.util.Locale.US, date.year, date.monthValue))
+        }.sortedBy { it.key }
+
     fun bySymbol(t: List<Trade>) = groupBy(t) { listOf(it.symbol.uppercase()) }
     fun byStrategy(t: List<Trade>) = groupBy(t) { listOf(it.strategy) }
     fun byEmotion(t: List<Trade>) = groupBy(t) { listOf(it.emotion) }
