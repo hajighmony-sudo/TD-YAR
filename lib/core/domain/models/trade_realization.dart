@@ -9,6 +9,7 @@ class TradeRealization {
     required this.direction,
     required this.strategyId,
     required this.closedAt,
+    this.accountLabel,
     required this.netPnl,
     required this.grossPnl,
     required this.fees,
@@ -21,6 +22,7 @@ class TradeRealization {
   final String symbol;
   final TradeDirection direction;
   final String? strategyId;
+  final String? accountLabel;
   final DateTime closedAt;
   final double netPnl;
   final double grossPnl;
