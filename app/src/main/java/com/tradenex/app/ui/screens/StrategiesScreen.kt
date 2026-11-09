@@ -217,6 +217,17 @@ fun StrategiesScreen(nav: NavController) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TxField(editName, { editName = it }, "نام استراتژی")
                     TxField(editRules, { editRules = it }, "قوانین را با خط جدید جدا کن")
+                    Text("فایل‌های پیوست", color = Tx.Muted, fontSize = 11.sp)
+                    IconBox(Icons.Rounded.Add, "افزودن فایل") {
+                        pickingForEdit = true
+                        attachmentPicker.launch(arrayOf("*/*"))
+                    }
+                    editAttachments.forEach { file ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { editAttachments = editAttachments.filterNot { it.id == file.id } })
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -231,12 +242,14 @@ fun StrategiesScreen(nav: NavController) {
                                 name = selected.name,
                                 rules = selected.rules,
                                 createdAt = System.currentTimeMillis(),
+                                attachments = selected.attachments,
                             ),
                         )
                         AppState.strategies[index] = selected.copy(
                             name = editName.trim(),
                             rules = editRules.lines().map(String::trim).filter(String::isNotBlank),
                             version = selected.version + 1,
+                            attachments = editAttachments.toList(),
                         )
                         AppState.persist()
                     }
@@ -280,12 +293,14 @@ fun StrategiesScreen(nav: NavController) {
                                                 name = current.name,
                                                 rules = current.rules,
                                                 createdAt = System.currentTimeMillis(),
+                                                attachments = current.attachments,
                                             ),
                                         )
                                         AppState.strategies[index] = current.copy(
                                             name = revision.name,
                                             rules = revision.rules,
                                             version = current.version + 1,
+                                            attachments = revision.attachments,
                                         )
                                         AppState.persist()
                                     }
@@ -332,7 +347,7 @@ private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDel
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(s.name, color = if (s.active) Tx.Text else Tx.Muted, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-                Text("نسخه V${s.version} · ${s.rules.size} قانون · ${mine.size} معامله", color = Tx.Muted, fontSize = 11.sp)
+                Text("نسخه V${s.version} · ${s.rules.size} قانون · ${s.attachments.size} فایل · ${mine.size} معامله", color = Tx.Muted, fontSize = 11.sp)
                 Text(s.rules.take(2).joinToString(" · "), color = Tx.Muted, fontSize = 10.sp, maxLines = 1)
                 TextButton(onClick = onHistory) {
                     Text("تاریخچه نسخه‌ها · ${AppState.strategyRevisions.count { it.strategyId == s.id }}", color = Tx.Gold, fontSize = 10.sp)
