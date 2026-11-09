@@ -1,5 +1,10 @@
 package com.tradenex.app.ui.screens
 
+import android.content.Intent
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -47,6 +53,7 @@ import com.tradenex.app.data.Analytics
 import com.tradenex.app.data.AppState
 import com.tradenex.app.data.Strategy
 import com.tradenex.app.data.StrategyRevision
+import com.tradenex.app.data.StrategyAttachment
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.GoldButton
 import com.tradenex.app.ui.components.IconBox
@@ -55,8 +62,35 @@ import com.tradenex.app.ui.theme.Tx
 
 @Composable
 fun StrategiesScreen(nav: NavController) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var ruleInput by remember { mutableStateOf("") }
+    var attachments by remember { mutableStateOf(emptyList<StrategyAttachment>()) }
+    var editAttachments by remember { mutableStateOf(emptyList<StrategyAttachment>()) }
+    var pickingForEdit by remember { mutableStateOf(false) }
+    val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            val metadata = runCatching {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        (if (nameIndex >= 0) cursor.getString(nameIndex) else null) to
+                            (if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else 0L)
+                    } else null
+                }
+            }.getOrNull()
+            val attachment = StrategyAttachment(
+                id = System.currentTimeMillis(),
+                uri = uri.toString(),
+                mimeType = context.contentResolver.getType(uri) ?: "*/*",
+                displayName = metadata?.first?.takeIf(String::isNotBlank) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "فایل پیوست",
+                sizeBytes = metadata?.second ?: 0L,
+            )
+            if (pickingForEdit) editAttachments = editAttachments + attachment else attachments = attachments + attachment
+        }
+    }
     val rules = remember { mutableStateListOf<String>() }
     var editingStrategy by remember { mutableStateOf<Strategy?>(null) }
     var deletingStrategy by remember { mutableStateOf<Strategy?>(null) }
@@ -102,7 +136,8 @@ fun StrategiesScreen(nav: NavController) {
             (includeInactive || strategy.active) &&
                 (strategyQuery.isBlank() ||
                     strategy.name.contains(strategyQuery, ignoreCase = true) ||
-                    strategy.rules.any { it.contains(strategyQuery, ignoreCase = true) })
+                    strategy.rules.any { it.contains(strategyQuery, ignoreCase = true) } ||
+                    strategy.attachments.any { it.displayName.contains(strategyQuery, ignoreCase = true) })
         }
         if (filteredStrategies.isEmpty()) {
             GlassCard(Modifier.fillMaxWidth()) {
@@ -115,6 +150,7 @@ fun StrategiesScreen(nav: NavController) {
                     editingStrategy = s
                     editName = s.name
                     editRules = s.rules.joinToString("\n")
+                    editAttachments = s.attachments
                 }, onDelete = { deletingStrategy = s }, onHistory = { historyStrategy = s })
             }
         }
