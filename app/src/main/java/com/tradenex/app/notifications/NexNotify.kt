@@ -49,7 +49,7 @@ object NexNotify {
     fun show(context: Context, category: NotifyCategory, title: String, body: String, route: String,
              actions: List<Pair<String, String>> = emptyList()) {
         val prefs = context.getSharedPreferences("nex_notify_settings", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("enabled_${category.key}", true)) return
+        if (!prefs.getBoolean("enabled_global", true) || !prefs.getBoolean("enabled_${category.key}", true)) return
         val id = ids.incrementAndGet()
         NotificationInbox.add(context, InboxNotification(id, category, title, body, System.currentTimeMillis(), route))
         if (Build.VERSION.SDK_INT >= 33 &&
