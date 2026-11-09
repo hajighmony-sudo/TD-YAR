@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -61,9 +62,9 @@ fun NotificationCenterScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxSize()) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected == "all", { selected = "all" }, label = { Text("همه") })
-                    NotifyCategory.entries.forEach { category ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item { FilterChip(selected == "all", { selected = "all" }, label = { Text("همه") }) }
+                    items(NotifyCategory.entries, key = { it.key }) { category ->
                         FilterChip(selected == category.key, { selected = category.key }, label = { Text(category.label) })
                     }
                 }
