@@ -105,9 +105,13 @@ fun SettingsScreen(nav: NavController) {
         }
         Reveal(2) {
             SettingGroup("معامله و ریسک") {
-                StepRow("بالانس اولیه", if (s.hideBalance) "••••" else AppState.selectedAccount.baseCurrency + " " + String.format(Locale.US, "%,.0f", AppState.selectedAccount.startingBalance),
-                    { updateSelectedBalance(-500.0) },
-                    { updateSelectedBalance(500.0) })
+                if (AppState.accounts.any { !it.archived }) {
+                    StepRow("بالانس اولیه", if (s.hideBalance) "••••" else AppState.selectedAccount.baseCurrency + " " + String.format(Locale.US, "%,.0f", AppState.selectedAccount.startingBalance),
+                        { updateSelectedBalance(-500.0) },
+                        { updateSelectedBalance(500.0) })
+                } else {
+                    Text("برای تنظیم بالانس، ابتدا حساب خودت را در بخش حساب‌ها ثبت کن.", color = Tx.Muted, fontSize = 11.sp)
+                }
                 StepRow("لات پیش‌فرض", String.format(Locale.US, "%.2f", s.defaultLot),
                     { update { it.copy(defaultLot = (round((it.defaultLot - 0.05) * 100) / 100).coerceAtLeast(0.01)) } },
                     { update { it.copy(defaultLot = round((it.defaultLot + 0.05) * 100) / 100) } })
