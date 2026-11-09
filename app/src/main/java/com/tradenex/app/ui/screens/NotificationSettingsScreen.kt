@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tradenex.app.notifications.NotifyCategory
+import com.tradenex.app.data.AppState
 import com.tradenex.app.notifications.NexNotify
 import androidx.compose.material3.Button
 
