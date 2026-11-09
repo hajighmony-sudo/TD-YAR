@@ -116,10 +116,10 @@ void main() {
   test('JSON archive import rolls back all rows when a duplicate appears', () async {
     final importer = JsonArchiveImportService(database: AppDatabase.instance);
     final now = DateTime.utc(2026, 1, 1).toIso8601String();
-    final archive = {
+    final archive = <String, Object?>{
       'format': 'td-yar-export',
       'schema_version': 2,
-      'accounts': [
+      'accounts': <Map<String, Object?>>[
         {
           'id': 'duplicate-account',
           'name': 'Duplicate A',
@@ -141,17 +141,17 @@ void main() {
           'updated_at': now,
         },
       ],
-      'strategies': [],
-      'playbooks': [],
-      'attachments': [],
-      'trades': [],
-      'journal_entries': [],
-      'psychology_entries': [],
-      'risk_profiles': [],
-      'trade_risk_records': [],
-      'learning_resources': [],
-      'trading_sessions': [],
-      'audit_events': [],
+      'strategies': <Map<String, Object?>>[],
+      'playbooks': <Map<String, Object?>>[],
+      'attachments': <Map<String, Object?>>[],
+      'trades': <Map<String, Object?>>[],
+      'journal_entries': <Map<String, Object?>>[],
+      'psychology_entries': <Map<String, Object?>>[],
+      'risk_profiles': <Map<String, Object?>>[],
+      'trade_risk_records': <Map<String, Object?>>[],
+      'learning_resources': <Map<String, Object?>>[],
+      'trading_sessions': <Map<String, Object?>>[],
+      'audit_events': <Map<String, Object?>>[],
       'settings': <String, String>{},
     };
 
