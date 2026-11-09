@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/models/strategy.dart';
@@ -119,6 +121,27 @@ class SqliteStrategyRepository implements StrategyRepository {
         where: 'strategy_id = ?',
         whereArgs: [id],
       );
+      final resources = await txn.query(
+        'learning_resources',
+        columns: ['id', 'related_strategy_ids_json'],
+      );
+      for (final resource in resources) {
+        final linkedIds = (jsonDecode(
+          resource['related_strategy_ids_json'] as String? ?? '[]',
+        ) as List<dynamic>).whereType<String>().toList();
+        if (linkedIds.contains(id)) {
+          linkedIds.removeWhere((linkedId) => linkedId == id);
+          await txn.update(
+            'learning_resources',
+            {
+              'related_strategy_ids_json': jsonEncode(linkedIds),
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [resource['id']],
+          );
+        }
+      }
       await txn.delete(
         'attachments',
         where: 'owner_type = ? AND owner_id = ?',
