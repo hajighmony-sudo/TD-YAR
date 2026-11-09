@@ -100,6 +100,39 @@ fun PsychologyScreen(nav: NavController) {
                 }
             }
         }
+        Reveal(2) {
+            val recent = TradingPsychologyStore.days.values
+                .filter { it.date <= date.toString() }
+                .sortedByDescending { it.date }
+                .take(7)
+            GlassCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    SectionTitle("روند چک‌این‌های اخیر", "${recent.size} روز ثبت‌شده")
+                    if (recent.isEmpty()) {
+                        Text("با ذخیره چک‌این روزانه، روند تمرکز و نظم اینجا نمایش داده می‌شود.", color = Tx.Muted, fontSize = 10.sp)
+                    } else {
+                        val avgFocus = recent.map { it.focus }.average()
+                        val avgDiscipline = recent.map { it.discipline }.average()
+                        val avgStress = recent.map { it.stress }.average()
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("تمرکز میانگین", color = Tx.Muted, fontSize = 10.sp)
+                            Text(String.format(Locale.US, "%.1f/5", avgFocus), color = Tx.Gold, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("پایبندی میانگین", color = Tx.Muted, fontSize = 10.sp)
+                            Text(String.format(Locale.US, "%.1f/5", avgDiscipline), color = Tx.Green, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("استرس میانگین", color = Tx.Muted, fontSize = 10.sp)
+                            Text(String.format(Locale.US, "%.1f/5", avgStress), color = Tx.Red, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        recent.forEach { day ->
+                            Text("${day.date} · تمرکز ${day.focus} · نظم ${day.discipline} · استرس ${day.stress}", color = Tx.Muted, fontSize = 9.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
