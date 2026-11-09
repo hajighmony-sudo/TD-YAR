@@ -71,6 +71,9 @@ object MetaTrader {
 
     /** Must be called on the main thread (it mutates Compose state). */
     fun importDeals(deals: List<Deal>, accountId: String = AppState.selectedAccount.id): ImportResult {
+        require(accountId.isNotBlank() && AppState.accounts.any { it.id == accountId && !it.archived }) {
+            "ابتدا یک حساب در بخش حساب‌ها بساز و انتخاب کن؛ واردکردن تاریخچه فقط به حساب انتخاب‌شده اضافه می‌شود."
+        }
         val (trades, dup) = toTrades(deals, accountId, AppState.trades.map { it.id }.toSet())
         val added = AppState.addTrades(trades)
         return ImportResult(added, dup, trades.size - added)
