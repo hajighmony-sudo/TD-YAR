@@ -7,6 +7,8 @@ import '../../data/repositories/app_infrastructure_repository.dart';
 import '../../data/repositories/journal_repository.dart';
 import '../../data/repositories/learning_repository.dart';
 import '../../data/repositories/psychology_repository.dart';
+import '../../data/repositories/playbook_repository.dart';
+import '../../data/local/app_database.dart';
 import '../../data/repositories/risk_repository.dart';
 import '../../data/repositories/strategy_repository.dart';
 import '../../data/repositories/trading_session_repository.dart';
@@ -27,6 +29,8 @@ class ReportExportService {
     LearningRepository? learningRepository,
     TradingSessionRepository? tradingSessionRepository,
     AppInfrastructureRepository? infrastructureRepository,
+    PlaybookRepository? playbookRepository,
+    AppDatabase? database,
   })  : _trades = tradeRepository,
         _performance = performanceService,
         _journals = journalRepository,
@@ -35,7 +39,9 @@ class ReportExportService {
         _risk = riskRepository,
         _learning = learningRepository,
         _sessions = tradingSessionRepository,
-        _infrastructure = infrastructureRepository;
+        _infrastructure = infrastructureRepository,
+        _playbooks = playbookRepository,
+        _database = database;
 
   final TradeRepository _trades;
   final PerformanceAnalyticsService _performance;
@@ -46,6 +52,8 @@ class ReportExportService {
   final LearningRepository? _learning;
   final TradingSessionRepository? _sessions;
   final AppInfrastructureRepository? _infrastructure;
+  final PlaybookRepository? _playbooks;
+  final AppDatabase? _database;
 
   Future<String> exportJson({DateTime? from, DateTime? to}) async {
     _validate(from, to);
@@ -70,6 +78,14 @@ class ReportExportService {
 
     final journals = await _journals.getEntries(from: from, to: to);
     final strategies = await _strategies.getAll(includeArchived: true);
+    final playbooks = _playbooks == null
+        ? <Map<String, Object?>>[]
+        : (await _playbooks!.getPlaybooks()).map((item) => item.toMap()).toList();
+    final attachments = _database == null
+        ? <Map<String, Object?>>[]
+        : (await (await _database!.database).query('attachments'))
+            .map((row) => Map<String, Object?>.from(row))
+            .toList();
     final report = await _performance.buildReport(from: from, to: to);
     final psychology = _psychology == null
         ? <Map<String, Object?>>[]
@@ -131,6 +147,8 @@ class ReportExportService {
       'trades': selectedTrades,
       'journal_entries': journals.map((entry) => entry.toMap()).toList(),
       'strategies': strategies.map((strategy) => strategy.toMap()).toList(),
+      'playbooks': playbooks,
+      'attachments': attachments,
       'psychology_entries': psychology,
       'risk_profiles': riskProfiles,
       'trade_risk_records': tradeRisks,
@@ -146,6 +164,8 @@ class ReportExportService {
         'learning': _learning != null,
         'sessions': _sessions != null,
         'infrastructure': _infrastructure != null,
+        'playbooks': _playbooks != null,
+        'attachments': _database != null,
       },
     });
   }
