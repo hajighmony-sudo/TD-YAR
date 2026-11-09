@@ -12,13 +12,16 @@ class SqlitePsychologyRepository implements PsychologyRepository {
   Future<Database> get _db => _database.database;
 
   void _validate(PsychologyEntry entry) {
+    if (entry.id.trim().isEmpty || entry.mood.trim().isEmpty) {
+      throw ArgumentError('Psychology entry id and mood are required.');
+    }
     for (final value in [entry.confidence, entry.focus, entry.stress]) {
       if (value < 1 || value > 5) {
         throw ArgumentError('Psychology ratings must be between 1 and 5.');
       }
     }
-    if (entry.mood.trim().isEmpty) {
-      throw ArgumentError.value(entry.mood, 'mood', 'Required.');
+    if (entry.emotions.any((value) => value.trim().isEmpty)) {
+      throw ArgumentError('Emotion tags cannot be empty.');
     }
   }
 
@@ -38,7 +41,9 @@ class SqlitePsychologyRepository implements PsychologyRepository {
       'psychology_entries', entry.toMap(),
       where: 'id = ?', whereArgs: [entry.id],
     );
-    if (changed == 0) throw StateError('Psychology entry not found: ${entry.id}');
+    if (changed == 0) {
+      throw StateError('Psychology entry not found: ${entry.id}');
+    }
   }
 
   @override
@@ -55,6 +60,9 @@ class SqlitePsychologyRepository implements PsychologyRepository {
     DateTime? to,
     String? tradeId,
   }) async {
+    if (from != null && to != null && to.isBefore(from)) {
+      throw ArgumentError('End date must not precede start date.');
+    }
     final clauses = <String>[];
     final args = <Object?>[];
     if (from != null) {
@@ -73,7 +81,7 @@ class SqlitePsychologyRepository implements PsychologyRepository {
       'psychology_entries',
       where: clauses.isEmpty ? null : clauses.join(' AND '),
       whereArgs: clauses.isEmpty ? null : args,
-      orderBy: 'entry_date DESC',
+      orderBy: 'entry_date DESC, created_at DESC',
     );
     return rows.map(PsychologyEntry.fromMap).toList(growable: false);
   }
