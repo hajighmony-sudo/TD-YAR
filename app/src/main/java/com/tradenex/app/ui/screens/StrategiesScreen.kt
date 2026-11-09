@@ -1,6 +1,9 @@
 package com.tradenex.app.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -190,7 +193,7 @@ fun StrategiesScreen(nav: NavController) {
                     }
                     attachments.forEach { file ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f).clickable { runCatching { openStrategyAttachment(context, file) } })
                             Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { attachments = attachments.filterNot { it.id == file.id } })
                         }
                     }
@@ -330,6 +333,19 @@ fun StrategiesScreen(nav: NavController) {
             dismissButton = { TextButton(onClick = { deletingStrategy = null }) { Text("انصراف", color = Tx.Muted) } },
         )
     }
+}
+
+
+private fun openStrategyAttachment(context: android.content.Context, attachment: StrategyAttachment) {
+    val source = Uri.parse(attachment.uri)
+    val uri = if (source.scheme == "file") {
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(source.path ?: error("مسیر فایل نامعتبر است")))
+    } else source
+    context.startActivity(
+        Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, attachment.mimeType.ifBlank { "*/*" })
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+    )
 }
 
 @Composable
