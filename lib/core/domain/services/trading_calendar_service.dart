@@ -36,6 +36,9 @@ class TradingCalendarService {
     return range(DateTime(year, month, 1), DateTime(year, month + 1, 0));
   }
 
+  Future<List<CalendarDaySummary>> year(int year) =>
+      range(DateTime(year, 1, 1), DateTime(year, 12, 31));
+
   Future<List<CalendarDaySummary>> range(DateTime from, DateTime to) async {
     final start = DateTime(from.year, from.month, from.day);
     final end = DateTime(to.year, to.month, to.day);
