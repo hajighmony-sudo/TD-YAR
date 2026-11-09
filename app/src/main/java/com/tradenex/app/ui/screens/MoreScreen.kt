@@ -39,7 +39,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tag
@@ -111,7 +110,7 @@ fun MoreScreen(nav: NavController) {
         MenuItem("آزمایشگاه ریسک", "کِلی، مونت‌کارلو، افت سرمایه، R", Icons.Rounded.Science, "risk_lab", Tx.Red),
         MenuItem("# هشتگ‌ها", "برچسب‌گذاری معامله‌ها", Icons.Rounded.Tag, "tags", Tx.Purple),
         MenuItem("TX AI", "شخصیت معاملاتی و مربی عملکرد", Icons.Rounded.AutoAwesome, "tx_ai", Tx.Gold),
-        MenuItem("روان‌شناسی", "خلق‌وخو، تمرکز، FOMO و نظم ذهنی", Icons.Rounded.Psychology, "psychology", Tx.Purple),
+        MenuItem("روان‌شناسی", "خلق‌وخو، تمرکز، FOMO و نظم ذهنی", Icons.Rounded.Insights, "psychology", Tx.Purple),
         MenuItem("گزارش‌ها", "کندل، نقشه حرارتی", Icons.Rounded.BarChart, "perf", Tx.Gold),
         MenuItem("آموزش", "متن، عکس، ویدیو", Icons.Rounded.MenuBook, "edu", Tx.Green),
         MenuItem("تم‌ها", "Default · Gold", Icons.Rounded.Palette, "settings", Tx.Gold),
