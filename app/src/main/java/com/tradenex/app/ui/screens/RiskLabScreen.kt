@@ -76,7 +76,7 @@ fun RiskLabScreen(nav: NavController) {
             }
             if (r.isNotEmpty()) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatTile("میانگین R", f2(r.average()), if (r.average() >= 0) Tx.Green else Tx.Red, Modifier.weight(1f), sub = "${Jalali.digits(r.size)} معامله با ریسک ثبت‌شده")
+                    StatTile("میانگین R", f2(r.average()), if (r.average() >= 0) Tx.Green else Tx.Red, Modifier.weight(1f), sub = "${persianDigits(r.size)} معامله با ریسک ثبت‌شده")
                     StatTile("بهترین R", f2(r.max()), Tx.Green, Modifier.weight(1f))
                     StatTile("بدترین R", f2(r.min()), Tx.Red, Modifier.weight(1f))
                 }
@@ -107,10 +107,10 @@ fun RiskLabScreen(nav: NavController) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle("شبیه‌سازی مونت‌کارلو", "نمونه‌گیری مجدد از معامله‌های خودت · ۶۰۰ اجرا")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        horizons.forEachIndexed { i, h -> TxChip("${Jalali.digits(h)} معامله", horizonIdx == i, { horizonIdx = i }) }
+                        horizons.forEachIndexed { i, h -> TxChip("${persianDigits(h)} معامله", horizonIdx == i, { horizonIdx = i }) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ruinFractions.forEachIndexed { i, f -> TxChip("ورشکستگی = افت ${Jalali.digits((f * 100).toInt())}٪", ruinIdx == i, { ruinIdx = i }) }
+                        ruinFractions.forEachIndexed { i, f -> TxChip("ورشکستگی = افت ${persianDigits((f * 100).toInt())}٪", ruinIdx == i, { ruinIdx = i }) }
                     }
                     if (mc != null) {
                         Canvas(Modifier.fillMaxWidth().height(170.dp)) {
