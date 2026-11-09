@@ -27,6 +27,7 @@ export 'core/domain/services/performance_analytics.dart';
 export 'core/domain/services/performance_analytics_service.dart';
 export 'core/domain/services/psychology_analytics.dart';
 export 'core/domain/services/risk_calculator.dart';
+export 'core/domain/services/risk_management_service.dart';
 export 'core/domain/services/trade_calculator.dart';
 export 'core/domain/services/trading_calendar.dart';
 export 'core/domain/services/trading_calendar_service.dart';
