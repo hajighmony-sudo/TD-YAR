@@ -86,6 +86,7 @@ fun AddTradeScreen(nav: NavController) {
     var buy by remember { mutableStateOf(true) }
     var symbol by remember { mutableStateOf("") }
     var lot by remember { mutableStateOf(settings.defaultLot.coerceAtLeast(0.0)) }
+    var lotText by remember { mutableStateOf(if (settings.defaultLot > 0.0) String.format(java.util.Locale.US, "%.2f", settings.defaultLot) else "") }
     var win by remember { mutableStateOf(true) }
     var amount by remember { mutableStateOf(0.0) }
     var amountText by remember { mutableStateOf("") }
@@ -181,14 +182,18 @@ fun AddTradeScreen(nav: NavController) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("حجم معامله (لات)", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.fillMaxWidth())
+                    TxField(lotText, { value ->
+                        lotText = value
+                        lot = value.trim().replace(",", ".").toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+                    }, "حجم لات را تایپ کن")
                     Stepper(
                         valueText = String.format(java.util.Locale.US, "%.2f", lot),
-                        onMinus = { lot = stepLot(lot, -1) },
-                        onPlus = { lot = stepLot(lot, 1) },
+                        onMinus = { lot = stepLot(lot, -1); lotText = String.format(java.util.Locale.US, "%.2f", lot) },
+                        onPlus = { lot = stepLot(lot, 1); lotText = String.format(java.util.Locale.US, "%.2f", lot) },
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        lotPresets.forEach { TxChip(it.toString(), lot == it, { lot = it }) }
+                        lotPresets.forEach { TxChip(it.toString(), lot == it, { lot = it; lotText = String.format(java.util.Locale.US, "%.2f", it) }) }
                     }
                     Text("تاریخ معامله", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.fillMaxWidth())
                     TxField(tradeDateText, { tradeDateText = it }, "میلادی YYYY-MM-DD یا شمسی 1405/08/17")
