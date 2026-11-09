@@ -137,7 +137,7 @@ fun SpinningGlobe(openMask: Int, utcMinute: Int, modifier: Modifier = Modifier, 
                     ) { change, drag ->
                         change.consume()
                         lastTouch = System.currentTimeMillis()
-                        val r = size.minDimension * 0.40f
+                        val r = minOf(size.width, size.height) * 0.40f
                         lon0 -= drag.x / r * (180f / PI.toFloat())
                         tilt = (tilt + drag.y / r * 0.9f).coerceIn(-1.15f, 1.15f)
                     }
@@ -145,7 +145,7 @@ fun SpinningGlobe(openMask: Int, utcMinute: Int, modifier: Modifier = Modifier, 
                 .pointerInput(countries) {
                     detectTapGestures { pos ->
                         lastTouch = System.currentTimeMillis()
-                        val r = size.minDimension * 0.40f
+                        val r = minOf(size.width, size.height) * 0.40f
                         val x = (pos.x - size.width / 2f) / r
                         val y = (size.height / 2f - pos.y) / r
                         val rr = x * x + y * y
@@ -164,7 +164,7 @@ fun SpinningGlobe(openMask: Int, utcMinute: Int, modifier: Modifier = Modifier, 
                 },
         ) {
             val c = center
-            val r = size.minDimension * 0.40f
+            val r = minOf(size.width, size.height) * 0.40f
             val gilded = Tx.isGilded
             val cityList = cities
             val ct = cos(tilt.toDouble()).toFloat(); val st = sin(tilt.toDouble()).toFloat()
