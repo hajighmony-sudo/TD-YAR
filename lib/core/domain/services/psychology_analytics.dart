@@ -38,9 +38,8 @@ class PsychologyAnalytics {
     for (final entry in entries) {
       final mood = entry.mood.trim();
       moodCounts.update(mood, (count) => count + 1, ifAbsent: () => 1);
-      final outcome = entry.tradeId == null
-          ? null
-          : linkedOutcomes[entry.tradeId];
+      final outcome =
+          entry.tradeId == null ? null : linkedOutcomes[entry.tradeId];
       if (outcome == null) continue;
       linkedCount++;
       (entry.followedPlan ? followed : notFollowed).add(outcome.netPnl);
@@ -65,8 +64,7 @@ class PsychologyAnalytics {
       linkedTradeEntryCount: linkedCount,
       followedPlanCount: followedCount,
       notFollowedPlanCount: entries.length - followedCount,
-      averageConfidence:
-          averageInt(entries.map((item) => item.confidence)),
+      averageConfidence: averageInt(entries.map((item) => item.confidence)),
       averageFocus: averageInt(entries.map((item) => item.focus)),
       averageStress: averageInt(entries.map((item) => item.stress)),
       planAdherencePercent: followedCount / entries.length * 100,
