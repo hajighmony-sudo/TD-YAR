@@ -13,7 +13,7 @@ class DatabaseBackupService {
       : _db = database ?? AppDatabase.instance;
 
   final AppDatabase _db;
-  static const int _currentSchemaVersion = 6;
+  static const int _currentSchemaVersion = 7;
 
   Future<File> createBackup(String destinationPath) async {
     if (!destinationPath.toLowerCase().endsWith('.db')) {
