@@ -21,6 +21,8 @@ import org.json.JSONObject
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.temporal.WeekFields
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
@@ -42,6 +44,14 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
             val reason = plan?.optString("noTradeReason").orEmpty()
             val confirmed = plan?.optBoolean("confirmed", false) ?: false
             if (count == 0 && (!confirmed || reason.isBlank())) notifyReview()
+        }
+        if (today.dayOfWeek.value == 5) {
+            val weeklyPrefs = applicationContext.getSharedPreferences("nex_notify_weekly", Context.MODE_PRIVATE)
+            val weekKey = "${today.get(WeekFields.ISO.weekBasedYear())}-${today.get(WeekFields.ISO.weekOfWeekBasedYear())}"
+            if (weeklyPrefs.getString("sent_week", null) != weekKey) {
+                NexNotify.weeklyReport(applicationContext)
+                weeklyPrefs.edit().putString("sent_week", weekKey).apply()
+            }
         }
         ReminderScheduler.schedule(applicationContext)
         return Result.success()
