@@ -60,25 +60,19 @@ class LearningLibraryService {
 
     final hasText = resource.body.trim().isNotEmpty;
     final hasMedia = resource.mediaPath?.trim().isNotEmpty ?? false;
-    switch (resource.type) {
-      case LearningContentType.text:
-        if (!hasText || hasMedia) {
-          throw ArgumentError('Text content must contain text only.');
-        }
-        break;
-      case LearningContentType.image:
-      case LearningContentType.video:
-        if (!hasMedia || hasText) {
-          throw ArgumentError(
-            'Image/video content must contain media only; use mixed for both.',
-          );
-        }
-        break;
-      case LearningContentType.mixed:
-        if (!hasText || !hasMedia) {
-          throw ArgumentError('Mixed content requires both text and media.');
-        }
-        break;
+    if (resource.type == LearningContentType.text) {
+      if (!hasText || hasMedia) {
+        throw ArgumentError('Text content must contain text only.');
+      }
+    } else if (resource.type == LearningContentType.image ||
+        resource.type == LearningContentType.video) {
+      if (!hasMedia || hasText) {
+        throw ArgumentError(
+          'Image/video content must contain media only; use mixed for both.',
+        );
+      }
+    } else if (!hasText || !hasMedia) {
+      throw ArgumentError('Mixed content requires both text and media.');
     }
 
     final source = resource.sourceUrl?.trim();
