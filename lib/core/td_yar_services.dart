@@ -154,4 +154,13 @@ class TdYarServices {
   final ReportExportService reports;
   final DatabaseBackupService backups;
   final JsonArchiveImportService archiveImporter;
+
+  /// Opens and verifies the local database before the app exposes services.
+  Future<void> initialize() async {
+    await database.database;
+  }
+
+  /// Closes the shared SQLite connection during application shutdown.
+  /// Services can be initialized again after this call.
+  Future<void> close() => database.close();
 }
