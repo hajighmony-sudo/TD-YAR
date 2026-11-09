@@ -1,0 +1,8 @@
+import 'dart:convert';
+enum LearningContentType { text, image, video, mixed }
+class LearningResource {
+ const LearningResource({required this.id,required this.title,required this.type,required this.createdAt,required this.updatedAt,this.body='',this.mediaPath,this.caption='',this.category='',this.tags=const [],this.relatedStrategyIds=const [],this.sourceUrl,this.isFavorite=false});
+ final String id,title,body,caption,category;final LearningContentType type;final String? mediaPath,sourceUrl;final List<String> tags,relatedStrategyIds;final bool isFavorite;final DateTime createdAt,updatedAt;
+ Map<String,Object?> toMap()=>{'id':id,'title':title,'type':type.name,'body':body,'media_path':mediaPath,'caption':caption,'category':category,'tags_json':jsonEncode(tags),'related_strategy_ids_json':jsonEncode(relatedStrategyIds),'source_url':sourceUrl,'is_favorite':isFavorite?1:0,'created_at':createdAt.toUtc().toIso8601String(),'updated_at':updatedAt.toUtc().toIso8601String()};
+ factory LearningResource.fromMap(Map<String,Object?> m){List<String> d(String k)=>(jsonDecode(m[k] as String? ?? '[]') as List<dynamic>).cast<String>();return LearningResource(id:m['id'] as String,title:m['title'] as String,type:LearningContentType.values.byName(m['type'] as String),body:m['body'] as String? ?? '',mediaPath:m['media_path'] as String?,caption:m['caption'] as String? ?? '',category:m['category'] as String? ?? '',tags:d('tags_json'),relatedStrategyIds:d('related_strategy_ids_json'),sourceUrl:m['source_url'] as String?,isFavorite:(m['is_favorite'] as num? ?? 0)==1,createdAt:DateTime.parse(m['created_at'] as String).toLocal(),updatedAt:DateTime.parse(m['updated_at'] as String).toLocal());}
+}
