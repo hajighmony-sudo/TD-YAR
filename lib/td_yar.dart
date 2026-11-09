@@ -1,4 +1,8 @@
 export 'core/data/local/app_database.dart';
+export 'core/data/repositories/journal_repository.dart';
+export 'core/data/repositories/playbook_repository.dart';
+export 'core/data/repositories/sqlite_journal_repository.dart';
+export 'core/data/repositories/sqlite_playbook_repository.dart';
 export 'core/data/repositories/sqlite_trade_repository.dart';
 export 'core/data/repositories/trade_repository.dart';
 export 'core/domain/models/journal_entry.dart';
