@@ -13,6 +13,7 @@ import com.tradenex.app.data.WeeklyPlannerStore
 import com.tradenex.app.data.EducationStore
 import com.tradenex.app.nav.AppNav
 import com.tradenex.app.notifications.NexNotify
+import com.tradenex.app.notifications.NotificationInbox
 import com.tradenex.app.reminders.ReminderScheduler
 import com.tradenex.app.ui.theme.ThemeController
 import com.tradenex.app.ui.theme.TradenexTheme
@@ -23,6 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         ThemeController.init(this)
         NexNotify.initialize(applicationContext)
+        intent?.getIntExtra("nex_notification_id", -1)?.takeIf { it > 0 }?.let { NotificationInbox.markRead(applicationContext, it) }
         enableEdgeToEdge()
         AppState.initialize(applicationContext)
         WeeklyPlannerStore.initialize(applicationContext)
