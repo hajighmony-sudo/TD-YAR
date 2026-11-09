@@ -73,43 +73,43 @@ class ReportExportService {
     final report = await _performance.buildReport(from: from, to: to);
     final psychology = _psychology == null
         ? <Map<String, Object?>>[]
-        : (await _psychology!.getEntries(from: from, to: to))
+        : (await _psychology.getEntries(from: from, to: to))
             .map((entry) => entry.toMap())
             .toList();
     final riskProfiles = _risk == null
         ? <Map<String, Object?>>[]
-        : (await _risk!.getProfiles())
+        : (await _risk.getProfiles())
             .map((profile) => profile.toMap())
             .toList();
     final tradeRisks = <Map<String, Object?>>[];
     if (_risk != null) {
       for (final id in selectedTradeIds) {
-        final record = await _risk!.getTradeRisk(id);
+        final record = await _risk.getTradeRisk(id);
         if (record != null) tradeRisks.add(record.toMap());
       }
     }
     final learning = _learning == null
         ? <Map<String, Object?>>[]
-        : (await _learning!.list())
+        : (await _learning.list())
             .map((resource) => resource.toMap())
             .toList();
     final sessions = _sessions == null
         ? <Map<String, Object?>>[]
-        : (await _sessions!.getAll(includeDisabled: true))
+        : (await _sessions.getAll(includeDisabled: true))
             .map((session) => session.toMap())
             .toList();
 
     final accounts = _infrastructure == null
         ? <Map<String, Object?>>[]
-        : (await _infrastructure!.listAccounts(includeArchived: true))
+        : (await _infrastructure.listAccounts(includeArchived: true))
             .map((account) => account.toMap())
             .toList();
     final settings = _infrastructure == null
         ? <String, String>{}
-        : await _infrastructure!.getSettings();
+        : await _infrastructure.getSettings();
     final auditEvents = _infrastructure == null
         ? <Map<String, Object?>>[]
-        : (await _infrastructure!.getAuditEvents(limit: 5000))
+        : (await _infrastructure.getAuditEvents(limit: 5000))
             .map((event) => {
                   'id': event.id,
                   'event_type': event.eventType,
