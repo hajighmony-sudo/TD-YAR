@@ -60,6 +60,7 @@ fun StrategiesScreen(nav: NavController) {
     val rules = remember { mutableStateListOf<String>() }
     var editingStrategy by remember { mutableStateOf<Strategy?>(null) }
     var deletingStrategy by remember { mutableStateOf<Strategy?>(null) }
+    var historyStrategy by remember { mutableStateOf<Strategy?>(null) }
     var editName by remember { mutableStateOf("") }
     var editRules by remember { mutableStateOf("") }
     var strategyQuery by remember { mutableStateOf("") }
@@ -114,7 +115,7 @@ fun StrategiesScreen(nav: NavController) {
                     editingStrategy = s
                     editName = s.name
                     editRules = s.rules.joinToString("\n")
-                }, onDelete = { deletingStrategy = s })
+                }, onDelete = { deletingStrategy = s }, onHistory = { historyStrategy = s })
             }
         }
 
@@ -197,6 +198,34 @@ fun StrategiesScreen(nav: NavController) {
         )
     }
 
+    historyStrategy?.let { selected ->
+        val revisions = AppState.strategyRevisions.filter { it.strategyId == selected.id }.sortedByDescending { it.version }
+        AlertDialog(
+            onDismissRequest = { historyStrategy = null },
+            containerColor = Tx.Dialog,
+            title = { Text("تاریخچه «${selected.name}»", color = Tx.Text) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("نسخه فعلی: V${selected.version}", color = Tx.Gold, fontWeight = FontWeight.Bold)
+                    if (revisions.isEmpty()) {
+                        Text("هنوز نسخه قبلی برای این استراتژی ذخیره نشده است.", color = Tx.Muted)
+                    } else {
+                        revisions.forEach { revision ->
+                            Column(
+                                Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.04f), RoundedCornerShape(10.dp)).padding(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Text("V${revision.version} · ${revision.name}", color = Tx.Text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                revision.rules.forEach { rule -> Text("• $rule", color = Tx.Muted, fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { historyStrategy = null }) { Text("بستن", color = Tx.Gold) } },
+        )
+    }
+
     deletingStrategy?.let { selected ->
         AlertDialog(
             onDismissRequest = { deletingStrategy = null },
@@ -215,7 +244,7 @@ fun StrategiesScreen(nav: NavController) {
 }
 
 @Composable
-private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDelete: () -> Unit, onHistory: () -> Unit) {
     val visible = AppState.visibleTrades
     val mine = remember(s.name, visible) { visible.filter { it.strategy == s.name }.sortedWith(compareBy({ it.epochDay }, { it.id })) }
     val net = mine.sumOf { it.pnl }
@@ -231,6 +260,9 @@ private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDel
                 Text(s.name, color = if (s.active) Tx.Text else Tx.Muted, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
                 Text("نسخه V${s.version} · ${s.rules.size} قانون · ${mine.size} معامله", color = Tx.Muted, fontSize = 11.sp)
                 Text(s.rules.take(2).joinToString(" · "), color = Tx.Muted, fontSize = 10.sp, maxLines = 1)
+                TextButton(onClick = onHistory) {
+                    Text("تاریخچه نسخه‌ها · ${AppState.strategyRevisions.count { it.strategyId == s.id }}", color = Tx.Gold, fontSize = 10.sp)
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spark(curve, c, Modifier.width(72.dp).height(24.dp))
