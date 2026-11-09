@@ -2,6 +2,7 @@ package com.tradenex.app.core
 
 import com.tradenex.app.data.Trade
 import org.junit.Assert.assertEquals
+import java.time.LocalDate
 import org.junit.Test
 
 class InsightsTest {
@@ -18,5 +19,14 @@ class InsightsTest {
     @Test fun groupsBySymbolSortedByPnl() {
         val g = Insights.bySymbol(listOf(t(1, 5.0, sym = "xauusd"), t(2, -9.0, sym = "EURUSD"), t(3, 7.0, sym = "XAUUSD")))
         assertEquals("XAUUSD", g[0].key); assertEquals(12.0, g[0].pnl, 1e-9); assertEquals(2, g[0].count)
+    }
+
+    @Test fun groupsByMonthInChronologicalOrder() {
+        val jan = LocalDate.of(2026, 1, 12).toEpochDay()
+        val feb = LocalDate.of(2026, 2, 2).toEpochDay()
+        val groups = Insights.byMonth(listOf(t(1, 8.0, feb), t(2, -3.0, jan), t(3, 4.0, jan)))
+        assertEquals(listOf("2026-01", "2026-02"), groups.map { it.key })
+        assertEquals(1.0, groups[0].pnl, 1e-9)
+        assertEquals(8.0, groups[1].pnl, 1e-9)
     }
 }
