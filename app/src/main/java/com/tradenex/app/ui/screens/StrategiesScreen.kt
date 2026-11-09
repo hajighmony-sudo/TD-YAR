@@ -51,7 +51,6 @@ import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.GoldButton
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
-import com.tradenex.app.ui.components.TxChip
 import com.tradenex.app.ui.theme.Tx
 
 @Composable
@@ -96,8 +95,8 @@ fun StrategiesScreen(nav: NavController) {
 
         TxField(strategyQuery, { strategyQuery = it }, "جست‌وجوی نام یا قوانین استراتژی")
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TxChip("فعال‌ها", !includeInactive, { includeInactive = false })
-            TxChip("همه استراتژی‌ها", includeInactive, { includeInactive = true })
+            StrategyFilterChip("فعال‌ها", !includeInactive) { includeInactive = false }
+            StrategyFilterChip("همه استراتژی‌ها", includeInactive) { includeInactive = true }
         }
         val filteredStrategies = AppState.strategies.filter { strategy ->
             (includeInactive || strategy.active) &&
@@ -344,5 +343,20 @@ private fun Spark(values: List<Double>, color: Color, modifier: Modifier) {
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+
+@Composable
+private fun StrategyFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) Tx.Gold.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.04f))
+            .border(1.dp, if (selected) Tx.Gold else Color.White.copy(alpha = 0.16f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(label, color = if (selected) Tx.Gold else Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
