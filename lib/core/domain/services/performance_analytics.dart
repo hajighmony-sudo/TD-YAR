@@ -53,10 +53,9 @@ class PerformanceAnalytics {
     final net = _sum(outcomes.map((item) => item.netPnl));
     final gross = _sum(outcomes.map((item) => item.grossPnl));
     final fees = _sum(outcomes.map((item) => item.fees));
-    final grossWins = _sum(wins.map((item) => item.netPnl));
-    final grossLosses = _sum(losses.map((item) => item.netPnl.abs()));
-    final maxDrawdown = _maxDrawdown(outcomes);
-    final totalDuration = outcomes.fold<int>(
+    final positive = _sum(wins.map((item) => item.netPnl));
+    final negative = _sum(losses.map((item) => item.netPnl.abs()));
+    final durationSeconds = outcomes.fold<int>(
       0, (sum, item) => sum + item.duration.inSeconds,
     );
 
@@ -70,20 +69,23 @@ class PerformanceAnalytics {
       grossPnl: gross,
       totalFees: fees,
       winRate: outcomes.isEmpty ? 0 : wins.length / outcomes.length * 100,
-      averageWin: wins.isEmpty ? 0 : grossWins / wins.length,
-      averageLoss: losses.isEmpty ? 0 : -grossLosses / losses.length,
-      profitFactor: grossLosses == 0
-          ? (grossWins == 0 ? null : double.infinity)
-          : grossWins / grossLosses,
+      averageWin: wins.isEmpty ? 0 : positive / wins.length,
+      averageLoss: losses.isEmpty ? 0 : -negative / losses.length,
+      profitFactor: negative == 0 ? null : positive / negative,
       expectancy: outcomes.isEmpty ? 0 : net / outcomes.length,
-      maxDrawdown: maxDrawdown,
+      maxDrawdown: _maxDrawdown(outcomes),
       averageDuration: outcomes.isEmpty
           ? Duration.zero
-          : Duration(seconds: totalDuration ~/ outcomes.length),
+          : Duration(seconds: durationSeconds ~/ outcomes.length),
       bySymbol: _breakdown(outcomes, (item) => item.symbol),
-      byStrategy: _breakdown(outcomes, (item) => item.strategyId ?? 'بدون استراتژی'),
+      byStrategy: _breakdown(
+        outcomes, (item) => item.strategyId ?? 'بدون استراتژی',
+      ),
       byWeekday: _breakdown(outcomes, (item) => _weekday(item.closedAt.weekday)),
-      byHour: _breakdown(outcomes, (item) => '${item.closedAt.hour.toString().padLeft(2, '0')}:00'),
+      byHour: _breakdown(
+        outcomes,
+        (item) => '${item.closedAt.hour.toString().padLeft(2, '0')}:00',
+      ),
     );
   }
 
