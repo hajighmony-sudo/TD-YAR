@@ -51,6 +51,7 @@ class TradingCalendar {
       final dayOutcomes = dayRealizations.isEmpty
           ? outcomes.where((item) => _sameDate(item.closedAt, date)).toList()
           : _aggregateDay(dayRealizations);
+      final pnlValues = dayOutcomes.map((item) => item.netPnl).toList();
       final journalCount = journalEntries
           .where((item) => _sameDate(item.entryDate, date)).length;
       final psychologyCount = psychologyEntries
@@ -60,9 +61,14 @@ class TradingCalendar {
         tradeCount: dayOutcomes.length,
         wins: dayOutcomes.where((item) => item.isWin).length,
         losses: dayOutcomes.where((item) => item.isLoss).length,
-        netPnl: dayOutcomes.fold<double>(
-          0, (sum, item) => sum + item.netPnl,
-        ),
+        netPnl: dayOutcomes.fold<double>(0, (sum, item) => sum + item.netPnl),
+        grossPnl:
+            dayOutcomes.fold<double>(0, (sum, item) => sum + item.grossPnl),
+        fees: dayOutcomes.fold<double>(0, (sum, item) => sum + item.fees),
+        bestTradePnl: pnlValues.isEmpty
+            ? 0 : pnlValues.reduce((a, b) => a > b ? a : b),
+        worstTradePnl: pnlValues.isEmpty
+            ? 0 : pnlValues.reduce((a, b) => a < b ? a : b),
         journalEntryCount: journalCount,
         psychologyEntryCount: psychologyCount,
       ));
