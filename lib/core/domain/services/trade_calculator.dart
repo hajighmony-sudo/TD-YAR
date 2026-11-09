@@ -100,6 +100,11 @@ class TradeCalculator {
         lot.remainingQuantity -= matched;
         lot.remainingFee -= entryFeePart;
 
+        if (!grossRealizedPnl.isFinite || !allocatedFees.isFinite ||
+            !closedQuantity.isFinite || !weightedEntry.isFinite ||
+            !weightedExit.isFinite) {
+          throw ArgumentError('Calculated execution metrics exceed numeric range.');
+        }
         if (lot.remainingQuantity <= _epsilon) {
           openLots.removeFirst();
         }
