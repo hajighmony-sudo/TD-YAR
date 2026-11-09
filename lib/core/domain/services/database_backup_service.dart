@@ -27,14 +27,37 @@ class DatabaseBackupService {
     }
 
     final database = await _db.database;
+    final staged = File('${target.path}.tmp');
+    final previous = File('${target.path}.previous');
+    var previousMoved = false;
+
     await database.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
     await _db.close();
     try {
       await target.parent.create(recursive: true);
-      if (await target.exists()) await target.delete();
-      final backup = await source.copy(target.path);
-      await _validateBackup(backup);
-      return backup;
+      if (await staged.exists()) await staged.delete();
+      if (await staged.exists()) {
+        throw FileSystemException('Could not clear staged backup', staged.path);
+      }
+
+      await source.copy(staged.path);
+      await _validateBackup(staged);
+
+      if (await previous.exists()) await previous.delete();
+      if (await target.exists()) {
+        await target.rename(previous.path);
+        previousMoved = true;
+      }
+      await staged.rename(target.path);
+      if (await previous.exists()) await previous.delete();
+      return target;
+    } catch (_) {
+      if (await staged.exists()) await staged.delete();
+      if (previousMoved && await previous.exists()) {
+        if (await target.exists()) await target.delete();
+        await previous.rename(target.path);
+      }
+      rethrow;
     } finally {
       await _db.database;
     }
@@ -52,6 +75,9 @@ class DatabaseBackupService {
 
     final livePath = await _db.databaseFile;
     final live = File(livePath);
+    if (source.absolute.path == live.absolute.path) {
+      throw ArgumentError('Restore source cannot be the live database.');
+    }
     final staged = File('$livePath.restore.tmp');
     final rollback = File('$livePath.restore.previous');
 
