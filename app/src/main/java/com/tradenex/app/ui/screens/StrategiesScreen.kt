@@ -217,6 +217,29 @@ fun StrategiesScreen(nav: NavController) {
                             ) {
                                 Text("V${revision.version} · ${revision.name}", color = Tx.Text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 revision.rules.forEach { rule -> Text("• $rule", color = Tx.Muted, fontSize = 10.sp) }
+                                TextButton(onClick = {
+                                    val index = AppState.strategies.indexOfFirst { it.id == selected.id }
+                                    if (index >= 0) {
+                                        val current = AppState.strategies[index]
+                                        AppState.strategyRevisions.add(
+                                            StrategyRevision(
+                                                id = System.currentTimeMillis(),
+                                                strategyId = current.id,
+                                                version = current.version,
+                                                name = current.name,
+                                                rules = current.rules,
+                                                createdAt = System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        AppState.strategies[index] = current.copy(
+                                            name = revision.name,
+                                            rules = revision.rules,
+                                            version = current.version + 1,
+                                        )
+                                        AppState.persist()
+                                    }
+                                    historyStrategy = null
+                                }) { Text("بازیابی این نسخه", color = Tx.Gold, fontSize = 10.sp) }
                             }
                         }
                     }
