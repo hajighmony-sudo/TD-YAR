@@ -69,6 +69,11 @@ class SqliteStrategyRepository implements StrategyRepository {
         'trades', {'strategy_id': null},
         where: 'strategy_id = ?', whereArgs: [id],
       );
+      await txn.delete(
+        'attachments',
+        where: 'owner_type = ? AND owner_id = ?',
+        whereArgs: ['strategy', id],
+      );
       await txn.delete('strategies', where: 'id = ?', whereArgs: [id]);
     });
   }
