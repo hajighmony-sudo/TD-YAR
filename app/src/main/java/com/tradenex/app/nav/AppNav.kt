@@ -40,6 +40,7 @@ import com.tradenex.app.ui.screens.EducationScreen
 import com.tradenex.app.ui.screens.HomeScreen
 import com.tradenex.app.ui.screens.MoreScreen
 import com.tradenex.app.ui.screens.NotificationCenterScreen
+import com.tradenex.app.ui.screens.NotificationSettingsScreen
 import com.tradenex.app.ui.screens.PerformanceScreen
 import com.tradenex.app.ui.screens.SessionsScreen
 import com.tradenex.app.ui.screens.SettingsScreen
@@ -103,10 +104,11 @@ fun AppNav(startDestination: String = "home") {
                     composable("insights") { InsightsScreen(nav) }
                     composable("tags") { TagsScreen(nav) }
                     composable("settings") { SettingsScreen(nav) }
-                    composable("notifications") { NotificationCenterScreen(onOpen = { target -> nav.navigate(target) { launchSingleTop = true } }) }
+                    composable("notifications") { NotificationCenterScreen(onOpen = { target -> nav.navigate(target) { launchSingleTop = true } }, onSettings = { nav.navigate("notification_settings") }) }
+                    composable("notification_settings") { NotificationSettingsScreen() }
                 }
             }
-            if (route != "add" && route != "notifications") {
+            if (route != "add" && route != "notifications" && route != "notification_settings") {
                 TxBottomBar(current = route) { target ->
                     nav.navigate(target) {
                         launchSingleTop = true
