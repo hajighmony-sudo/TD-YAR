@@ -14,7 +14,6 @@ class LearningLibraryService {
 
   Future<void> save(LearningResource resource) async {
     _validate(resource);
-
     final strategyRepository = _strategyRepository;
     if (strategyRepository != null) {
       for (final id in resource.relatedStrategyIds.toSet()) {
@@ -23,7 +22,6 @@ class LearningLibraryService {
         }
       }
     }
-
     if (await _repo.getById(resource.id) == null) {
       await _repo.create(resource);
     } else {
@@ -69,8 +67,10 @@ class LearningLibraryService {
         }
       case LearningContentType.image:
       case LearningContentType.video:
-        if (!hasMedia) {
-          throw ArgumentError('Image/video content requires a media path.');
+        if (!hasMedia || hasText) {
+          throw ArgumentError(
+            'Image/video content must contain media only; use mixed for both.',
+          );
         }
       case LearningContentType.mixed:
         if (!hasText || !hasMedia) {
