@@ -44,7 +44,7 @@ class TradingCalendar {
     final summaries = <CalendarDaySummary>[];
     for (var date = start;
         !date.isAfter(end);
-        date = date.add(const Duration(days: 1))) {
+        date = DateTime(date.year, date.month, date.day + 1)) {
       final dayRealizations = realizations
           .where((item) => _sameDate(item.closedAt, date))
           .toList(growable: false);
