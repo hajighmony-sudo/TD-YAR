@@ -65,6 +65,7 @@ class LearningLibraryService {
         if (!hasText || hasMedia) {
           throw ArgumentError('Text content must contain text only.');
         }
+        break;
       case LearningContentType.image:
       case LearningContentType.video:
         if (!hasMedia || hasText) {
@@ -72,10 +73,12 @@ class LearningLibraryService {
             'Image/video content must contain media only; use mixed for both.',
           );
         }
+        break;
       case LearningContentType.mixed:
         if (!hasText || !hasMedia) {
           throw ArgumentError('Mixed content requires both text and media.');
         }
+        break;
     }
 
     final source = resource.sourceUrl?.trim();
