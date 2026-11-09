@@ -127,7 +127,10 @@ jobs:
         run: flutter pub get
       - if: steps.detect.outputs.found == 'true'
         run: flutter analyze --no-fatal-infos
-      - name: Run Flutter journal tests (retry transient asset downloads)
+      - name: Install system SQLite for Linux tests
+        if: steps.detect.outputs.found == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - name: Run Flutter journal tests (retry transient failures)
         if: steps.detect.outputs.found == 'true'
         shell: bash
         run: |
