@@ -83,7 +83,9 @@ fun HomeScreen(nav: NavController) {
     val monthPct = monthPnl / accountStartBalance * 100
     val grossWin = visibleTrades.filter { it.pnl > 0 }.sumOf { it.pnl }
     val grossLoss = visibleTrades.filter { it.pnl < 0 }.sumOf { it.pnl }
-    val todayCount = visibleTrades.count { it.epochDay == today }
+    val todayTrades = visibleTrades.filter { it.epochDay == today }
+    val todayCount = todayTrades.size
+    val todayPnl = todayTrades.sumOf { it.pnl }
     // null = «لحظه‌ای»: one candle per recorded trade; otherwise one candle per day / week / Jalali month / year.
     var period by remember { mutableStateOf<Period?>(null) }
 
@@ -116,7 +118,7 @@ fun HomeScreen(nav: NavController) {
                         brush = Brush.verticalGradient(listOf(Tx.GoldPale, Color(0xFFE7A92B))),
                     ),
                 )
-                Text("Trade · Journal · Analyze · Improve", color = Tx.Muted, fontSize = 9.sp)
+                Text("حساب: ${AppState.selectedAccount.name} · ${tradeCount} معامله", color = Tx.Muted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { nav.navigate("accounts") })
             }
             RoundBtn(Icons.Rounded.Notifications, "اعلان‌ها") { nav.navigate("settings") }
         }
@@ -170,6 +172,10 @@ fun HomeScreen(nav: NavController) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatTile("مجموع سود", if (settings.hideBalance) "•••" else "+%,.0f".format(grossWin), Tx.Green, Modifier.weight(1f))
                         StatTile("مجموع ضرر", if (settings.hideBalance) "•••" else "%,.0f".format(grossLoss), Tx.Red, Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatTile("معاملات امروز", todayCount.toString(), Tx.Blue, Modifier.weight(1f))
+                        StatTile("خالص امروز", if (settings.hideBalance) "•••" else Analytics.money(todayPnl), if (todayPnl >= 0) Tx.Green else Tx.Red, Modifier.weight(1f))
                     }
                 }
             }
