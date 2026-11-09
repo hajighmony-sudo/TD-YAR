@@ -1,45 +1,80 @@
-# Architecture
+# TD-YAR Architecture
 
-## Principles
+## Product boundary
 
-1. **Manual-first:** the user is the source of every trade record. No broker, exchange, MetaTrader, market-data, or order-execution integration is part of this phase.
-2. **Local-first:** SQLite is the initial persistence layer. Domain calculations remain deterministic and independently testable.
-3. **Domain before presentation:** business rules live in plain Dart and must not import Flutter widgets, database packages, or network clients.
-4. **Auditable calculations:** every reported metric can be recomputed from the saved executions and documented rules.
-5. **User-authored knowledge:** playbooks and journal notes store the user's own observations; they do not generate trade signals or recommendations.
+TD-YAR is a manual-first trading journal and trader reflection companion. All trade data is entered by the user. This repository phase does not connect to exchanges, brokers, MetaTrader, market-data feeds, or order execution services. It does not issue trade signals or investment recommendations.
 
-## Current modules
+## Architecture rules
 
-- `core/domain/models`: trade, execution, journal, and playbook entities
-- `core/domain/services`: FIFO execution matching and realized P&L
-- `core/data/local`: SQLite schema and database lifecycle
-- `core/data/repositories`: repository contracts and SQLite implementation
+- Feature and domain logic is plain Dart and independent of Flutter widgets.
+- SQLite is the initial local-first persistence layer.
+- Repositories isolate storage from domain services.
+- Calculations are deterministic and based only on user-entered records.
+- UI/UX is intentionally not included in this phase.
+- Database changes must use explicit versioned migrations.
 
-## Data model
+## Current domain modules
 
-- A `Trade` is one manually created position cycle for one symbol and one direction.
-- A `TradeExecution` is an entry or exit fill belonging to that trade.
-- Exit fills are matched to entry fills in chronological FIFO order.
-- An exit that exceeds the currently open quantity is rejected.
-- Entry fees are allocated to closed quantity in proportion to the quantity consumed from each entry fill. Exit fees are allocated across the matched quantity of that exit fill.
-- Unmatched entry quantity remains open. No unrealized P&L is estimated.
+### 1. Manual trade journal
 
-## SQLite tables
+- `Trade` stores symbol, direction, account label, tags, notes, contract multiplier, and optional strategy association.
+- `TradeExecution` stores entry/exit fills, quantity, price, fee, and execution timestamp.
+- `TradeCalculator` matches exits to entry lots using FIFO and computes realized gross/net P&L, allocated fees, and remaining open quantity.
+- Exits exceeding available open quantity are rejected.
 
+### 2. Performance analytics
+
+- `PerformanceAnalytics` aggregates closed/partially closed trade outcomes.
+- Metrics include win rate, gross/net P&L, fees, average win/loss, profit factor, expectancy, maximum monetary drawdown, average duration, and breakdowns by symbol, strategy, weekday, and hour.
+- `PerformanceAnalyticsService` loads records through `TradeRepository`.
+- Open positions do not receive estimated unrealized P&L because no market-price feed exists.
+
+### 3. Risk management
+
+- `RiskProfile` stores a manually configured account balance, currency, per-trade risk limit, daily loss limit, and daily trade-count limit.
+- `TradeRiskRecord` stores a planned entry, stop, target, quantity, balance snapshot, estimated monetary risk/reward, risk/reward ratio, and risk percentage.
+- `RiskCalculator` validates long/short price relationships and checks configured limits. Results are informational bookkeeping, not recommendations.
+
+### 4. Strategy manager
+
+- `Strategy` stores the user's setup conditions, entry/exit/risk rules, timeframes, checklist, tags, and archive state.
+- Strategies support create, update, list, archive, and delete.
+- Trades can be associated with a strategy through `strategy_id`; deleting a strategy clears that association without deleting trade history.
+
+### 5. Trading psychology
+
+- `PsychologyEntry` records mood, confidence, focus, stress, plan adherence, FOMO/revenge-trade flags, emotions, notes, and an optional trade link.
+- Ratings are validated on a 1–5 scale.
+- `PsychologyAnalytics` summarizes the journal and compares linked realized outcomes by plan-adherence flag. This is descriptive correlation, not causal inference or mental-health assessment.
+
+### 6. Trading calendar
+
+- `TradingCalendar` builds a month of day summaries containing realized P&L, trade wins/losses, journal counts, and psychology-entry counts.
+- `TradingCalendarService` composes performance, journal, and psychology repositories for a requested month.
+
+## Persistence
+
+SQLite schema version 2 includes:
 - `trades`
 - `trade_executions`
 - `journal_entries`
 - `playbooks`
-- `attachments` (metadata only; binary files remain in app-managed local storage)
+- `attachments` (metadata only)
+- `strategies`
+- `risk_profiles`
+- `trade_risk_records`
+- `psychology_entries`
 
-Schema changes must increment the database version and include an explicit migration.
+Version 1 databases are upgraded by adding `trades.strategy_id` and creating the new feature tables. The migration preserves existing trade and journal records.
 
-## Planned next layers (not implemented here)
+## Validation
 
-- Analytics aggregation and date-range filters
-- Calendar summaries
-- JSON/CSV export and validated import
-- Attachment file management
-- Routine and review templates
-- Riverpod providers and application services
-- Presentation/UI layer, added only in a later phase
+Run:
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+```
+
+The repository contains unit tests for FIFO/P&L calculations and initial analytics/risk rules. Tests must be run in a Flutter SDK environment before merging.
