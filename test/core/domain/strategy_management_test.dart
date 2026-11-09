@@ -69,5 +69,7 @@ class _MemoryStrategyRepository implements StrategyRepository {
       values.values.where((item) => includeArchived || !item.isArchived).toList();
 
   @override
-  Future<void> delete(String id) async => values.remove(id);
+  Future<void> delete(String id) async {
+    values.remove(id);
+  }
 }
