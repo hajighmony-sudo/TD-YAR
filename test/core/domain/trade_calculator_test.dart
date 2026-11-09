@@ -39,6 +39,20 @@ void main() {
       );
 
   group('TradeCalculator', () {
+    test('trade account id survives model serialization', () {
+      final original = makeTrade(TradeDirection.long);
+      final restored = Trade.fromMap({
+        ...original.toMap(),
+        'account_id': 'account-1',
+      });
+      expect(restored.accountId, 'account-1');
+    });
+
+    test('legacy trade maps without account id remain readable', () {
+      final legacy = Map<String, Object?>.from(makeTrade(TradeDirection.long).toMap())
+        ..remove('account_id');
+      expect(Trade.fromMap(legacy).accountId, isNull);
+    });
     test('calculates a long trade and allocates fees', () {
       final metrics = TradeCalculator.calculate(
         trade: makeTrade(TradeDirection.long),
