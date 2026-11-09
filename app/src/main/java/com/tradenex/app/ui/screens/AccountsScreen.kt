@@ -40,11 +40,20 @@ fun AccountsScreen(nav: NavController) {
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var broker by remember { mutableStateOf("") }
-    var currency by remember { mutableStateOf("USD") }
-    var type by remember { mutableStateOf("REAL") }
-    var balance by remember { mutableStateOf("10000") }
+    var currency by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var balance by remember { mutableStateOf("") }
+    var formError by remember { mutableStateOf("") }
 
     Page(title = "حساب‌های معاملاتی", onBack = { nav.popBackStack() }) {
+        if (AppState.accounts.none { !it.archived }) {
+            GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("هنوز حسابی ثبت نکرده‌ای", color = Tx.Gold, fontWeight = FontWeight.ExtraBold)
+                    Text("برای جلوگیری از نمایش موجودی و اطلاعات ساختگی، ابتدا حساب خودت را با مشخصات دقیق ثبت کن.", color = Tx.Muted, fontSize = 11.sp)
+                }
+            }
+        }
         AppState.accounts.filterNot { it.archived }.forEach { account ->
             val selected = account.id == AppState.selectedAccountId
             val accountTrades = AppState.trades.filter { it.accountId == account.id }
@@ -65,7 +74,7 @@ fun AccountsScreen(nav: NavController) {
                         Column(Modifier.weight(1f)) {
                             Text("بالانس اولیه", color = Tx.Muted, fontSize = 10.sp)
                             Text(
-                                if (AppState.settings.hideBalance) "••••" else "${account.baseCurrency} " + String.format(Locale.US, "%,.2f", account.startingBalance),
+                                if (AppState.settings.hideBalance) "••••" else if (account.baseCurrency.isBlank()) "بالانس ثبت نشده" else account.baseCurrency + " " + String.format(Locale.US, "%,.2f", account.startingBalance),
                                 color = Tx.Text,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
@@ -114,7 +123,7 @@ fun AccountsScreen(nav: NavController) {
             }
         }
         GoldButton("افزودن حساب جدید") {
-            name = ""; broker = ""; currency = "USD"; type = "REAL"; balance = "10000"
+            name = ""; broker = ""; currency = ""; type = ""; balance = ""; formError = ""
             creating = true
         }
         Spacer(Modifier.height(12.dp))
@@ -134,22 +143,30 @@ fun AccountsScreen(nav: NavController) {
                         listOf("REAL", "DEMO", "PROP").forEach { TxChip(it, type == it, { type = it }) }
                     }
                     Text("ارز پایه حساب", color = Tx.Muted, fontSize = 11.sp)
+                    TxField(currency, { currency = it.uppercase(Locale.ROOT).filter { ch -> ch.isLetter() }.take(8) }, "کد ارز را وارد کن؛ مثلاً USD")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("USD", "EUR", "GBP", "JPY").forEach { TxChip(it, currency == it, { currency = it }) }
                     }
-                    TxField(balance, { balance = it }, "بالانس اولیه")
+                    TxField(balance, { balance = it }, "بالانس اولیه (به ارز انتخابی)")
+                    if (formError.isNotBlank()) Text(formError, color = Tx.Red, fontSize = 11.sp)
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     val amount = balance.trim().toDoubleOrNull()
-                    if (name.isNotBlank() && amount != null && amount > 0.0 && amount.isFinite()) {
-                        val id = "account-${System.currentTimeMillis()}"
-                        AppState.accounts.add(TradingAccount(id, name.trim(), broker.trim(), type, currency, amount))
-                        AppState.selectedAccountId = id
-                        AppState.settings = AppState.settings.copy(startBalance = amount)
-                        AppState.persist()
-                        creating = false
+                    when {
+                        name.isBlank() -> formError = "نام حساب را وارد کن."
+                        type.isBlank() -> formError = "نوع حساب را انتخاب کن."
+                        currency.isBlank() -> formError = "ارز پایه حساب را وارد کن."
+                        amount == null || amount <= 0.0 || !amount.isFinite() -> formError = "بالانس اولیه معتبر و بزرگ‌تر از صفر وارد کن."
+                        else -> {
+                            val id = "account-${System.currentTimeMillis()}"
+                            AppState.accounts.add(TradingAccount(id, name.trim(), broker.trim(), type, currency, amount!!))
+                            AppState.selectedAccountId = id
+                            AppState.settings = AppState.settings.copy(startBalance = amount)
+                            AppState.persist()
+                            creating = false
+                        }
                     }
                 }) { Text("ایجاد حساب", color = Tx.Gold) }
             },
