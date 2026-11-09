@@ -78,7 +78,7 @@ void main() {
     final engine = TradingSessions();
     final overnight = session(
       id: 'overnight', name: 'Overnight',
-      timezoneId: 'UTC', openHour: 22, closeHour: 6,
+      timezoneId: 'Europe/London', openHour: 22, closeHour: 6,
       weekdays: const [1],
     );
     final status = engine.statusesAt(
