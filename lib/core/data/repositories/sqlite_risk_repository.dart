@@ -14,6 +14,14 @@ class SqliteRiskRepository implements RiskRepository {
 
   @override
   Future<void> saveProfile(RiskProfile profile) async {
+    if (profile.name.trim().isEmpty ||
+        profile.accountBalance <= 0 ||
+        profile.maxRiskPerTradePercent < 0 ||
+        profile.maxDailyLossPercent < 0 ||
+        profile.maxTradesPerDay < 0 ||
+        profile.currency.trim().isEmpty) {
+      throw ArgumentError('Risk profile contains invalid values.');
+    }
     await (await _db).insert(
       'risk_profiles', profile.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
