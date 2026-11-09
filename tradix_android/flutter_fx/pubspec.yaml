@@ -1,0 +1,20 @@
+name: tradenex_fx
+description: TX AI account-backed trading analytics UI and deterministic Rust FFI bridge for TRADIX.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.1.4
+
+flutter:
+  uses-material-design: true
