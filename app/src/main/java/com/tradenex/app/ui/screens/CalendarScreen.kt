@@ -134,7 +134,47 @@ fun CalendarScreen(nav: NavController) {
         Text("امروز: ${jalaliText(today)}", color = Tx.Gold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
 
         if (tab == 0) {
+            val monthStart = JalaliCalendar.toGregorian(selectedJalaliYear, selectedJalaliMonth, 1).toEpochDay()
+            val monthEnd = JalaliCalendar.toGregorian(
+                selectedJalaliYear, selectedJalaliMonth,
+                JalaliCalendar.daysInMonth(selectedJalaliYear, selectedJalaliMonth),
+            ).toEpochDay()
+            val monthTrades = trades.filter { it.epochDay in monthStart..monthEnd }
+            val monthNet = monthTrades.sumOf { it.pnl }
+            val activeDays = monthTrades.map { it.epochDay }.distinct().size
+            val greenDays = monthTrades.groupBy { it.epochDay }.count { (_, dayTrades) -> dayTrades.sumOf { it.pnl } > 0 }
             Reveal(1) {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        SectionTitle("خلاصه ماه انتخاب‌شده", "${monthTrades.size} معامله در ${activeDays} روز")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text("سود/زیان خالص", color = Tx.Muted, fontSize = 10.sp)
+                                Text(
+                                    if (settings.hideBalance) "•••" else Analytics.money(monthNet),
+                                    color = if (monthNet >= 0) Tx.Green else Tx.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("روزهای مثبت", color = Tx.Muted, fontSize = 10.sp)
+                                Text("$greenDays", color = Tx.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("میانگین هر روز فعال", color = Tx.Muted, fontSize = 10.sp)
+                                Text(
+                                    if (settings.hideBalance || activeDays == 0) "—" else Analytics.money(monthNet / activeDays),
+                                    color = if (monthNet >= 0) Tx.Green else Tx.Red,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Reveal(2) {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
