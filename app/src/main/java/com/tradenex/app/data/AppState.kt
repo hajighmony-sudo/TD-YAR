@@ -174,7 +174,8 @@ object AppState {
 
     /** Bulk add (CSV import): one persist for the whole batch. Invalid rows are skipped; returns how many were added. */
     fun addTrades(list: List<Trade>): Int {
-        val ok = list.filter { it.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}")) && it.lot > 0.0 && it.pnl.isFinite() }
+        val validAccountIds = accounts.filterNot { it.archived }.map { it.id }.toSet()
+        val ok = list.filter { it.accountId in validAccountIds && it.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}")) && it.lot > 0.0 && it.pnl.isFinite() }
         if (ok.isEmpty()) return 0
         trades.addAll(ok)
         persist()
