@@ -32,7 +32,8 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 
 ### 7. Risk management
 
-- Reusable profiles store account-balance snapshots, currency, maximum per-trade risk percentage, daily loss percentage and trade-count limits.
+- Reusable profiles link optionally to a manual trading account and store account-balance snapshots, currency, maximum per-trade risk percentage, daily loss percentage and trade-count limits.
+- When a profile is linked to an account, daily realized-loss and unique-trade-count checks are scoped to that account.
 - Per-trade records store entry, stop, target, quantity, multiplier, planned monetary risk/reward, R:R and risk percentage.
 - Calculations validate long/short stop and target placement, finite positive inputs and profile bounds.
 - Daily checks count unique trades with entry fills on the selected local day and sum losing realized exits independently, so wins do not hide losses.
@@ -71,9 +72,9 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 
 ## Persistence and migrations
 
-SQLite schema version **7** includes trades, executions, journal entries, strategies, playbooks, attachments metadata, psychology entries, risk profiles, per-trade risk records, trading sessions, learning resources, manual trading accounts, app settings and audit events.
+SQLite schema version **8** includes trades, executions, journal entries, strategies, playbooks, attachments metadata, psychology entries, risk profiles, per-trade risk records, trading sessions, learning resources, manual trading accounts, app settings and audit events.
 
-Migrations preserve existing trade/journal data and add feature tables/indexes incrementally. Version 7 adds a nullable foreign-key account link to trades, backfills legacy account labels into manual account rows, and adds atomic audit triggers. Schema creation is centralized in `AppDatabase`.
+Migrations preserve existing trade/journal data and add feature tables/indexes incrementally. Version 7 adds a nullable foreign-key account link to trades and backfills legacy account labels into manual account rows. Version 8 links risk profiles to manual accounts so daily loss and trade-count checks are account-scoped. Atomic audit triggers cover supported domain mutations. Schema creation is centralized in `AppDatabase`.
 
 ## Validation
 
