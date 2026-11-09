@@ -305,7 +305,7 @@ object TxPackage {
         val salt = header.copyOfRange(MAGIC.size, MAGIC.size + 16)
         val baseIv = header.copyOfRange(MAGIC.size + 16, header.size)
         val zip = ZipInputStream(ChunkIn(input, key(password, salt), baseIv))
-        val directory = File(context.filesDir, "education_media").also { it.mkdirs() }
+        val directory = (context.getExternalFilesDir("education_media") ?: File(context.filesDir, "education_media")).also { it.mkdirs() }
         val saved = HashMap<String, String>()
         var manifest: JSONObject? = null
         var files = 0
