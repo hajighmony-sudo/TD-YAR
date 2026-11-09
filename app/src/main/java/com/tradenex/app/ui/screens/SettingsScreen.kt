@@ -114,6 +114,13 @@ fun SettingsScreen(nav: NavController) {
                 StepRow("ریسک هر معامله", String.format(Locale.US, "%.2f%%", s.riskPercent),
                     { update { it.copy(riskPercent = (it.riskPercent - 0.25).coerceAtLeast(0.25)) } },
                     { update { it.copy(riskPercent = (it.riskPercent + 0.25).coerceAtMost(10.0)) } })
+                StepRow("سقف ضرر روزانه", String.format(Locale.US, "%.1f%%", s.dailyLossLimitPercent),
+                    { update { it.copy(dailyLossLimitPercent = (it.dailyLossLimitPercent - 0.5).coerceAtLeast(0.5)) } },
+                    { update { it.copy(dailyLossLimitPercent = (it.dailyLossLimitPercent + 0.5).coerceAtMost(20.0)) } })
+                StepRow("حداکثر معاملات روزانه", s.maxTradesPerDay.toString(),
+                    { update { it.copy(maxTradesPerDay = (it.maxTradesPerDay - 1).coerceAtLeast(1)) } },
+                    { update { it.copy(maxTradesPerDay = (it.maxTradesPerDay + 1).coerceAtMost(100)) } })
+                Text("این سقف‌ها فقط هشدار و ابزار ثبت انضباط هستند؛ برنامه معامله‌ای را مسدود یا اجرا نمی‌کند.", color = Tx.Muted, fontSize = 10.sp)
                 SwitchRow("شنبه و یکشنبه تعطیل", "در نقشه حرارتی و تقویم خط‌خورده می‌شود", s.weekendHoliday) { v -> update { it.copy(weekendHoliday = v) } }
             }
         }
