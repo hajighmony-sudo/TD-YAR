@@ -105,10 +105,9 @@ class TradingSessionStatus {
   final SessionOccurrence? currentOccurrence;
   final SessionOccurrence? nextOccurrence;
 
-  DateTime? get nextOpenAt =>
-      isOpen ? currentOccurrence?.opensAt : nextOccurrence?.opensAt;
-  DateTime? get nextCloseAt =>
-      isOpen ? currentOccurrence?.closesAt : nextOccurrence?.closesAt;
+  DateTime? get currentOpenAt => currentOccurrence?.opensAt;
+  DateTime? get currentCloseAt => currentOccurrence?.closesAt;
+  DateTime? get nextOpenAt => nextOccurrence?.opensAt;
 }
 
 class SessionOverlap {
