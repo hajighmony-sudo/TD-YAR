@@ -113,6 +113,9 @@ class TradeCalculator {
 
     final openQuantity =
         openLots.fold<double>(0, (sum, lot) => sum + lot.remainingQuantity);
+    if (!openQuantity.isFinite) {
+      throw ArgumentError('Open quantity exceeds numeric range.');
+    }
 
     return TradeMetrics(
       closedQuantity: closedQuantity,
