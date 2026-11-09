@@ -17,10 +17,25 @@ class SqliteRiskRepository implements RiskRepository {
   @override
   Future<void> saveProfile(RiskProfile profile) async {
     RiskCalculator.validateProfile(profile);
-    await (await _db).insert(
-      'risk_profiles', profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final db = await _db;
+    await db.transaction((txn) async {
+      if (profile.accountId != null) {
+        final accounts = await txn.query(
+          'trading_accounts',
+          columns: ['id'],
+          where: 'id = ?',
+          whereArgs: [profile.accountId],
+          limit: 1,
+        );
+        if (accounts.isEmpty) {
+          throw StateError('Risk profile account not found: ${profile.accountId}');
+        }
+      }
+      await txn.insert(
+        'risk_profiles', profile.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   @override
