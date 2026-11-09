@@ -264,6 +264,35 @@ fun AddTradeScreen(nav: NavController) {
                 }
             }
         }
+        run {
+            val en = entryText.trim().toDoubleOrNull()
+            val sl = stopLossText.trim().toDoubleOrNull()
+            val tp = takeProfitText.trim().toDoubleOrNull()
+            val ex = exitText.trim().toDoubleOrNull()
+            if (usePriceCalculation && en != null && sl != null && sl != en) {
+                val dir = if (buy) 1.0 else -1.0
+                val risk = (en - sl) * dir
+                val wrongSide = risk <= 0.0
+                Reveal(5) {
+                    GlassCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            if (wrongSide) {
+                                Text("استاپ‌لاس در سمت اشتباهِ ${if (buy) "Buy" else "Sell"} است.", color = Tx.Red, fontSize = 11.sp)
+                            } else {
+                                if (tp != null) {
+                                    val rr = (tp - en) * dir / risk
+                                    RowLabelCompact("نسبت ریسک به ریوارد (برنامه)", String.format(java.util.Locale.US, "1 : %.2f", rr), if (rr >= 1.0) Tx.Green else Tx.Red)
+                                }
+                                if (ex != null) {
+                                    val r = (ex - en) * dir / risk
+                                    RowLabelCompact("نتیجه به R", String.format(java.util.Locale.US, "%+.2f R", r), if (r >= 0) Tx.Green else Tx.Red)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (overRisk) {
             Text(
                 "ضرر از ریسک تعیین‌شده (${settings.riskPercent}٪ بالانس) بیشتر است؛ در دفترچه علامت می‌خورد.",
