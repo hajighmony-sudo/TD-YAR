@@ -135,7 +135,7 @@ class AppDatabase {
     await db.execute('''CREATE TABLE IF NOT EXISTS trading_accounts (id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE, currency TEXT NOT NULL, initial_balance REAL NOT NULL DEFAULT 0, is_archived INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
     await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_accounts_name ON trading_accounts(name COLLATE NOCASE)');
     await db.execute('CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)');
-    await db.execute('''CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, event_type TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, details_json TEXT NOT NULL DEFAULT \'{}\', occurred_at TEXT NOT NULL)''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, event_type TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, details_json TEXT NOT NULL DEFAULT '{}', occurred_at TEXT NOT NULL)''');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_updated ON learning_resources(updated_at)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_category ON learning_resources(category)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_events(occurred_at)');
