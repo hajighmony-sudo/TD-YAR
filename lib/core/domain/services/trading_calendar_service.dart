@@ -29,8 +29,12 @@ class TradingCalendarService {
     return range(start, DateTime(start.year, start.month, start.day + 6));
   }
 
-  Future<List<CalendarDaySummary>> month(int year, int month) =>
-      range(DateTime(year, month, 1), DateTime(year, month + 1, 0));
+  Future<List<CalendarDaySummary>> month(int year, int month) {
+    if (month < 1 || month > 12) {
+      throw ArgumentError.value(month, 'month', 'Must be between 1 and 12.');
+    }
+    return range(DateTime(year, month, 1), DateTime(year, month + 1, 0));
+  }
 
   Future<List<CalendarDaySummary>> range(DateTime from, DateTime to) async {
     final start = DateTime(from.year, from.month, from.day);
