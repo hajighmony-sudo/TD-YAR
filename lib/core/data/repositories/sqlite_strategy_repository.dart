@@ -25,6 +25,9 @@ class SqliteStrategyRepository implements StrategyRepository {
 
   @override
   Future<void> update(Strategy strategy) async {
+    if (strategy.name.trim().isEmpty) {
+      throw ArgumentError.value(strategy.name, 'strategy.name', 'Required.');
+    }
     final changed = await (await _db).update(
       'strategies',
       strategy.toMap(),
@@ -54,6 +57,15 @@ class SqliteStrategyRepository implements StrategyRepository {
 
   @override
   Future<void> delete(String id) async {
-    await (await _db).delete('strategies', where: 'id = ?', whereArgs: [id]);
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.update(
+        'trades',
+        {'strategy_id': null},
+        where: 'strategy_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete('strategies', where: 'id = ?', whereArgs: [id]);
+    });
   }
 }
