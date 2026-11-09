@@ -30,6 +30,8 @@ class JsonArchiveImportService {
 
     final accounts = _mapList(decoded, 'accounts');
     final strategies = _mapList(decoded, 'strategies');
+    final playbooks = _mapList(decoded, 'playbooks');
+    final attachments = _mapList(decoded, 'attachments');
     final trades = _mapList(decoded, 'trades');
     final journals = _mapList(decoded, 'journal_entries');
     final psychology = _mapList(decoded, 'psychology_entries');
@@ -80,6 +82,7 @@ class JsonArchiveImportService {
       // Insert referenced parent records before their dependants.
       await _insertAll(txn, 'trading_accounts', accounts);
       await _insertAll(txn, 'strategies', strategies);
+      await _insertAll(txn, 'playbooks', playbooks);
 
       for (final row in tradeRows) {
         final accountId = row['account_id'] as String?;
@@ -142,6 +145,7 @@ class JsonArchiveImportService {
         }
       }
       await _insertAll(txn, 'learning_resources', learning);
+      await _insertAll(txn, 'attachments', attachments);
 
       for (final entry in settings.entries) {
         if (entry.key.trim().isEmpty || entry.value is! String) {
@@ -162,6 +166,8 @@ class JsonArchiveImportService {
       return ArchiveImportSummary(
         accounts: accounts.length,
         strategies: strategies.length,
+        playbooks: playbooks.length,
+        attachments: attachments.length,
         trades: tradeRows.length,
         executions: executionRows.length,
         journalEntries: journals.length,
@@ -244,6 +250,8 @@ class ArchiveImportSummary {
   const ArchiveImportSummary({
     required this.accounts,
     required this.strategies,
+    required this.playbooks,
+    required this.attachments,
     required this.trades,
     required this.executions,
     required this.journalEntries,
@@ -258,6 +266,8 @@ class ArchiveImportSummary {
 
   final int accounts;
   final int strategies;
+  final int playbooks;
+  final int attachments;
   final int trades;
   final int executions;
   final int journalEntries;
