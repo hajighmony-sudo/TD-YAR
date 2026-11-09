@@ -65,7 +65,19 @@ jobs:
         with:
           gradle-version: '8.14.3'
           cache-provider: basic
-      - run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace
+      - name: Test and build Android app (retry transient repository failures)
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Gradle failed on attempt $attempt; retrying after a short delay..."
+              sleep 15
+            fi
+          done
+          exit 1
       - uses: actions/upload-artifact@v6
         if: success()
         with:
