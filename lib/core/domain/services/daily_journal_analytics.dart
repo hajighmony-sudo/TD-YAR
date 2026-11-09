@@ -13,6 +13,11 @@ class DailyJournalAnalytics {
     final linkedTrades = <String>{};
     final daysWithPlan = <int>{};
     final daysWithReview = <int>{};
+    var entriesWithGoals = 0;
+    var goalCount = 0;
+    var entriesWithMistakes = 0;
+    var entriesWithStrengths = 0;
+    var entriesWithLessons = 0;
 
     for (final entry in entries) {
       dayKeys.add(_dateKey(entry.entryDate));
@@ -20,6 +25,11 @@ class DailyJournalAnalytics {
       if (entry.preMarketPlan.trim().isNotEmpty) daysWithPlan.add(key);
       if (entry.executionReview.trim().isNotEmpty) daysWithReview.add(key);
       linkedTrades.addAll(entry.linkedTradeIds);
+      if (entry.goals.isNotEmpty) entriesWithGoals++;
+      goalCount += entry.goals.length;
+      if (entry.mistakes.trim().isNotEmpty) entriesWithMistakes++;
+      if (entry.strengths.trim().isNotEmpty) entriesWithStrengths++;
+      if (entry.lessons.trim().isNotEmpty) entriesWithLessons++;
       for (final tag in entry.tags) {
         final normalized = tag.trim();
         if (normalized.isNotEmpty) {
@@ -74,6 +84,11 @@ class DailyJournalAnalytics {
       longestStreak: longest,
       daysWithPreMarketPlan: daysWithPlan.length,
       daysWithExecutionReview: daysWithReview.length,
+      entriesWithGoals: entriesWithGoals,
+      goalCount: goalCount,
+      entriesWithMistakes: entriesWithMistakes,
+      entriesWithStrengths: entriesWithStrengths,
+      entriesWithLessons: entriesWithLessons,
       linkedTradeCount: linkedTrades.length,
       tagCounts: Map.unmodifiable({
         for (final entry in orderedTags) entry.key: entry.value,
