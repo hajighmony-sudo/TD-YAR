@@ -70,6 +70,7 @@ internal class LocalStore(context: Context) :
 internal object SnapshotCodec {
     fun encode(
         trades: List<Trade>,
+        positions: List<JournalPosition>,
         accounts: List<TradingAccount>,
         strategies: List<Strategy>,
         strategyRevisions: List<StrategyRevision>,
@@ -124,6 +125,31 @@ internal object SnapshotCodec {
                     put("notes", t.notes); put("tradeName", t.tradeName); t.plannedRisk?.let { put("plannedRisk", it) }
                     put("strategyVersion", t.strategyVersion); put("timeframe", t.timeframe); put("marketCondition", t.marketCondition)
                     t.strategyFollowed?.let { put("strategyFollowed", it) }
+                })
+            }
+        })
+        put("positions", JSONArray().apply {
+            positions.forEach { position ->
+                put(JSONObject().apply {
+                    put("id", position.id); put("accountId", position.accountId)
+                    put("symbol", position.symbol); put("buy", position.buy)
+                    put("strategy", position.strategy); put("notes", position.notes)
+                    put("openedAtMillis", position.openedAtMillis)
+                    put("entryFills", JSONArray().apply {
+                        position.entryFills.forEach { fill ->
+                            put(JSONObject().apply {
+                                put("id", fill.id); put("volume", fill.volume); put("price", fill.price); put("atMillis", fill.atMillis)
+                            })
+                        }
+                    })
+                    put("exitFills", JSONArray().apply {
+                        position.exitFills.forEach { fill ->
+                            put(JSONObject().apply {
+                                put("id", fill.id); put("volume", fill.volume); put("price", fill.price)
+                                put("realizedPnl", fill.realizedPnl); put("atMillis", fill.atMillis)
+                            })
+                        }
+                    })
                 })
             }
         })
@@ -255,6 +281,44 @@ internal object SnapshotCodec {
                 ),
             )
         }
+        target.positions.clear()
+        val positionRows = snapshot.optJSONArray("positions") ?: JSONArray()
+        for (i in 0 until positionRows.length()) {
+            val row = positionRows.optJSONObject(i) ?: continue
+            fun readFills(key: String, exits: Boolean): List<PositionFill> {
+                val rows = row.optJSONArray(key) ?: JSONArray()
+                return (0 until rows.length()).mapNotNull { index ->
+                    val fill = rows.optJSONObject(index) ?: return@mapNotNull null
+                    val volume = fill.optDouble("volume", 0.0)
+                    val price = fill.optDouble("price", 0.0)
+                    if (!volume.isFinite() || volume <= 0.0 || !price.isFinite() || price <= 0.0) return@mapNotNull null
+                    PositionFill(
+                        id = fill.optLong("id", System.currentTimeMillis() + index),
+                        volume = volume,
+                        price = price,
+                        realizedPnl = if (exits) fill.optDouble("realizedPnl", 0.0) else 0.0,
+                        atMillis = fill.optLong("atMillis", 0L),
+                    )
+                }
+            }
+            val entries = readFills("entryFills", false)
+            val exits = readFills("exitFills", true)
+            if (entries.isNotEmpty() && exits.sumOf { it.volume } <= entries.sumOf { it.volume } + 1e-8) {
+                target.positions.add(
+                    JournalPosition(
+                        id = row.optLong("id"),
+                        accountId = row.optString("accountId", "default"),
+                        symbol = row.optString("symbol", ""),
+                        buy = row.optBoolean("buy", true),
+                        strategy = row.optString("strategy", ""),
+                        entryFills = entries,
+                        exitFills = exits,
+                        notes = row.optString("notes", ""),
+                        openedAtMillis = row.optLong("openedAtMillis", 0L),
+                    ),
+                )
+            }
+        }
         target.strategies.clear()
         val strategyRows = snapshot.optJSONArray("strategies") ?: JSONArray()
         for (i in 0 until strategyRows.length()) {
@@ -320,6 +384,7 @@ internal object SnapshotCodec {
 
 internal data class MutableSnapshot(
     val trades: MutableList<Trade>,
+    val positions: MutableList<JournalPosition>,
     val accounts: MutableList<TradingAccount>,
     val strategies: MutableList<Strategy>,
     val strategyRevisions: MutableList<StrategyRevision>,
