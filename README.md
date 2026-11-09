@@ -46,7 +46,7 @@ flutter test
 
 ## Accounting and analytics notes
 
-Executions are manually recorded as entry or exit fills. Exits are matched to entry fills using FIFO within each trade record. Each exit fill creates a dated realization, so partial exits contribute to the correct day and reporting range. Fees are allocated proportionally to the quantity closed. Reports include realized gross/net P&L, fees, win rate, average win/loss, profit factor, expectancy, monetary drawdown, average duration, and breakdowns by symbol, strategy, weekday, and hour.
+Executions are manually recorded as entry or exit fills. Exits are matched to entry fills using FIFO within each trade record. Each exit fill creates a dated realization, so partial exits contribute to the correct day and reporting range. Fees are allocated proportionally to the quantity closed. Reports include realized gross/net P&L, fees, win rate, average win/loss, profit factor, expectancy, monetary drawdown, average duration, and breakdowns by symbol, strategy, account, direction, weekday, and hour.
 
 Unrealized P&L is not estimated because this phase has no market-data feed. A daily loss-limit check sums losing realizations separately, so winning trades do not conceal losses when checking that limit. Metrics are bookkeeping calculations from user-entered values, not forecasts or trading advice.
 
