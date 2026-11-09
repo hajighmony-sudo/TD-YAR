@@ -1,6 +1,5 @@
 package com.tradenex.app.data
 
-import com.tradenex.app.core.Jalali
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -53,12 +52,7 @@ object TradeCsv {
         val s = raw.trim().replace('T', ' ')
         val datePart = s.substringBefore(' ')
         val timePart = s.substringAfter(' ', "")
-        val nums = datePart.split('-', '/', '.').mapNotNull { it.trim().toIntOrNull() }
-        if (nums.size != 3) return null
-        val date = runCatching {
-            if (nums[0] in 1200..1600) Jalali.parse(datePart)?.let { Jalali.toLocalDate(it) }
-            else LocalDate.of(nums[0], nums[1], nums[2])
-        }.getOrNull() ?: return null
+        val date = JalaliCalendar.parseDateInput(datePart.replace('.', '-')) ?: return null
         val time = runCatching { java.time.LocalTime.parse(timePart.take(8).let { if (it.length == 5) "$it:00" else it }) }.getOrNull()
         val millis = if (time != null) LocalDateTime.of(date, time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() else 0L
         return date.toEpochDay() to millis
