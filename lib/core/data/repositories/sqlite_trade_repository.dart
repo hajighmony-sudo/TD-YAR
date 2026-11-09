@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/models/trade.dart';
 import '../../domain/models/trade_execution.dart';
+import '../../domain/services/trade_calculator.dart';
 import '../local/app_database.dart';
 import 'trade_repository.dart';
 
@@ -15,6 +16,13 @@ class SqliteTradeRepository implements TradeRepository {
 
   @override
   Future<void> createTrade(Trade trade) async {
+    if (trade.symbol.trim().isEmpty) {
+      throw ArgumentError.value(
+        trade.symbol,
+        'trade.symbol',
+        'Cannot be empty.',
+      );
+    }
     await (await _db).insert(
       'trades',
       trade.toMap(),
@@ -24,6 +32,13 @@ class SqliteTradeRepository implements TradeRepository {
 
   @override
   Future<void> updateTrade(Trade trade) async {
+    if (trade.symbol.trim().isEmpty) {
+      throw ArgumentError.value(
+        trade.symbol,
+        'trade.symbol',
+        'Cannot be empty.',
+      );
+    }
     final changed = await (await _db).update(
       'trades',
       trade.toMap(),
@@ -65,11 +80,37 @@ class SqliteTradeRepository implements TradeRepository {
 
   @override
   Future<void> addExecution(TradeExecution execution) async {
-    await (await _db).insert(
-      'trade_executions',
-      execution.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    final db = await _db;
+    await db.transaction((txn) async {
+      final tradeRows = await txn.query(
+        'trades',
+        where: 'id = ?',
+        whereArgs: [execution.tradeId],
+        limit: 1,
+      );
+      if (tradeRows.isEmpty) {
+        throw StateError('Trade not found: ${execution.tradeId}');
+      }
+
+      final existingRows = await txn.query(
+        'trade_executions',
+        where: 'trade_id = ?',
+        whereArgs: [execution.tradeId],
+        orderBy: 'executed_at ASC, id ASC',
+      );
+      final existing = existingRows.map(TradeExecution.fromMap).toList();
+
+      TradeCalculator.calculate(
+        trade: Trade.fromMap(tradeRows.first),
+        executions: [...existing, execution],
+      );
+
+      await txn.insert(
+        'trade_executions',
+        execution.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    });
   }
 
   @override
