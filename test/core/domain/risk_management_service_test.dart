@@ -67,7 +67,9 @@ class _MemoryTradeRepository implements TradeRepository {
   final Map<String, List<TradeExecution>> executions;
 
   @override
-  Future<void> createTrade(Trade trade) async => trades.add(trade);
+  Future<void> createTrade(Trade trade) async {
+    trades.add(trade);
+  }
 
   @override
   Future<void> updateTrade(Trade trade) async {
