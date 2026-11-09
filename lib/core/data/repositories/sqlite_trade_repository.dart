@@ -25,6 +25,21 @@ class SqliteTradeRepository implements TradeRepository {
     }
   }
 
+  Future<void> _validateAccount(DatabaseExecutor db, String? accountId) async {
+    if (accountId == null) return;
+    final rows = await db.query(
+      'trading_accounts',
+      columns: ['id', 'is_archived'],
+      where: 'id = ?',
+      whereArgs: [accountId],
+      limit: 1,
+    );
+    if (rows.isEmpty) throw StateError('Trading account not found: $accountId');
+    if ((rows.first['is_archived'] as num) == 1) {
+      throw StateError('Archived trading accounts cannot receive new trades.');
+    }
+  }
+
   Future<void> _validateStrategy(DatabaseExecutor db, String? strategyId) async {
     if (strategyId == null) return;
     final rows = await db.query(
@@ -43,6 +58,7 @@ class SqliteTradeRepository implements TradeRepository {
     final db = await _db;
     await db.transaction((txn) async {
       await _validateStrategy(txn, trade.strategyId);
+      await _validateAccount(txn, trade.accountId);
       await txn.insert(
         'trades',
         trade.toMap(),
@@ -77,6 +93,7 @@ class SqliteTradeRepository implements TradeRepository {
         );
       }
       await _validateStrategy(txn, trade.strategyId);
+      await _validateAccount(txn, trade.accountId);
       await txn.update(
         'trades',
         trade.toMap(),
@@ -105,6 +122,7 @@ class SqliteTradeRepository implements TradeRepository {
     TradeDirection? direction,
     String? strategyId,
     String? accountLabel,
+    String? accountId,
   }) async {
     if (createdFrom != null &&
         createdTo != null &&
@@ -137,6 +155,10 @@ class SqliteTradeRepository implements TradeRepository {
     if (accountLabel != null) {
       clauses.add('account_label = ?');
       args.add(accountLabel);
+    }
+    if (accountId != null) {
+      clauses.add('account_id = ?');
+      args.add(accountId);
     }
     final rows = await (await _db).query(
       'trades',
