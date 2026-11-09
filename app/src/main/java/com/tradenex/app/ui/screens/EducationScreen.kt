@@ -107,13 +107,15 @@ fun EducationScreen(nav: NavController) {
             busy = true; message = "در حال ساخت بسته‌ی .tx …"
             val pass = txPassword
             val snapshot = EducationStore.lessons.toList()
+            val strategySnapshot = AppState.strategies.toList()
+            val revisionSnapshot = AppState.strategyRevisions.toList()
             scope.launch {
                 val r = withContext(Dispatchers.IO) {
-                    runCatching { context.contentResolver.openOutputStream(uri)!!.use { TxPackage.export(context, snapshot, pass, it) } }
+                    runCatching { context.contentResolver.openOutputStream(uri)!!.use { TxPackage.export(context, snapshot, pass, it, strategySnapshot, revisionSnapshot) } }
                 }
                 busy = false
                 message = r.fold(
-                    { "بسته‌ی .tx ساخته شد: ${it.lessons} درس، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} فایل قابل خواندن نبود)" else "" },
+                    { "بسته‌ی .tx ساخته شد: ${it.lessons} درس، ${it.strategies} استراتژی، ${it.revisions} نسخه، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} فایل قابل خواندن نبود)" else "" },
                     { "ساخت بسته ممکن نشد: ${it.message}" },
                 )
             }
@@ -179,7 +181,7 @@ fun EducationScreen(nav: NavController) {
                     Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): همه‌ی درس‌ها و فایل‌هایشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. برای رمزنگاری واقعی، رمز عبور الزامی است.", color = Tx.Muted, fontSize = 10.sp)
                     TxField(txPassword, { txPassword = it }, "رمز مشترک برای .tx و QR (الزامی)")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TxChip(if (busy) "…" else "خروجی .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای رمزنگاری فایل .tx ابتدا رمز تعیین کن." else if (EducationStore.lessons.isNotEmpty()) txExport.launch("tradix-education.tx") else message = "درسی برای خروجی گرفتن نیست." })
+                        TxChip(if (busy) "…" else "خروجی .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای رمزنگاری فایل .tx ابتدا رمز تعیین کن." else if (EducationStore.lessons.isNotEmpty() || AppState.strategies.isNotEmpty()) txExport.launch("td-yar-full-content.tx") else message = "درس یا استراتژی‌ای برای خروجی گرفتن نیست." })
                         TxChip("ورود .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای بازکردن فایل .tx رمز آن را وارد کن." else txImport.launch(arrayOf("*/*")) })
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
