@@ -2,59 +2,68 @@
 
 ## Product boundary
 
-TD-YAR is a manual-first trading journal and trader reflection companion. All trade data is entered by the user. This repository phase does not connect to exchanges, brokers, MetaTrader, market-data feeds, or order execution services. It does not issue trade signals or investment recommendations.
+TD-YAR is a manual-first trading journal and trader reflection companion. Users enter trades and all executions themselves. This phase has no exchange, broker, MetaTrader, market-data, or order-execution connection and provides no trading signals or investment recommendations.
 
 ## Architecture rules
 
-- Feature and domain logic is plain Dart and independent of Flutter widgets.
+- Domain logic is plain Dart and independent of Flutter widgets.
 - SQLite is the initial local-first persistence layer.
 - Repositories isolate storage from domain services.
-- Calculations are deterministic and based only on user-entered records.
-- UI/UX is intentionally not included in this phase.
-- Database changes must use explicit versioned migrations.
+- Calculations use only user-entered values.
+- UI/UX is intentionally excluded from this phase.
+- Database changes use explicit, data-preserving migrations.
 
-## Current domain modules
+## Five completed domain foundations
 
 ### 1. Manual trade journal
 
-- `Trade` stores symbol, direction, account label, tags, notes, contract multiplier, and optional strategy association.
-- `TradeExecution` stores entry/exit fills, quantity, price, fee, and execution timestamp.
-- `TradeCalculator` matches exits to entry lots using FIFO and computes realized gross/net P&L, allocated fees, and remaining open quantity.
-- Exits exceeding available open quantity are rejected.
+- `Trade` records symbol, long/short direction, account label, tags, notes, contract multiplier, and optional strategy association.
+- `TradeExecution` records multiple entry/exit fills, quantity, price, fee, timestamp, and per-fill notes.
+- Fills can be created, edited, and deleted. A mutation is accepted only when the complete resulting history remains valid.
+- Direction and contract multiplier cannot be changed after fills exist because doing so would reinterpret historical P&L.
+- Trades can be filtered by symbol, creation-date range, direction, strategy, and account.
+- `TradeCalculator` validates finite values and unique fill IDs, matches exits FIFO, allocates fees proportionally, and rejects over-closing.
 
 ### 2. Performance analytics
 
-- `PerformanceAnalytics` aggregates closed/partially closed trade outcomes.
-- Metrics include win rate, gross/net P&L, fees, average win/loss, profit factor, expectancy, maximum monetary drawdown, average duration, and breakdowns by symbol, strategy, weekday, and hour.
-- `PerformanceAnalyticsService` loads records through `TradeRepository`.
-- Open positions do not receive estimated unrealized P&L because no market-price feed exists.
+- `PerformanceAnalytics` creates a dated realization for every exit fill, including partial exits.
+- Date-range reports include only realizations in that range; each trade is aggregated once for trade-level statistics.
+- Metrics include realized gross/net P&L, allocated fees, win rate, average win/loss, profit factor, expectancy, maximum monetary drawdown over the chronological realization stream, average duration, and breakdowns by symbol, strategy, weekday, and hour.
+- `PerformanceAnalyticsService` loads data through `TradeRepository`.
+- Open positions have no estimated unrealized P&L because there is no market-price feed.
 
 ### 3. Risk management
 
-- `RiskProfile` stores a manually configured account balance, currency, per-trade risk limit, daily loss limit, and daily trade-count limit.
-- `TradeRiskRecord` stores a planned entry, stop, target, quantity, balance snapshot, estimated monetary risk/reward, risk/reward ratio, and risk percentage.
-- `RiskCalculator` validates long/short price relationships and checks configured limits. Results are informational bookkeeping, not recommendations.
+- `RiskProfile` stores account balance/currency and per-trade, daily-loss, and daily-trade-count limits.
+- `TradeRiskRecord` stores planned entry/stop/target, quantity, balance snapshot, monetary risk/reward, R:R, and account risk percentage.
+- Risk calculations validate long/short stop and target placement, finite numeric inputs, and profile bounds.
+- Daily loss checks sum negative realized fills independently; winning fills do not offset losing fills for limit evaluation.
+- A planned trade is checked against both the per-trade cap and remaining daily loss allowance.
+- These are user-configured bookkeeping checks, not investment recommendations.
 
 ### 4. Strategy manager
 
-- `Strategy` stores the user's setup conditions, entry/exit/risk rules, timeframes, checklist, tags, and archive state.
-- Strategies support create, update, list, archive, and delete.
-- Trades can be associated with a strategy through `strategy_id`; deleting a strategy clears that association without deleting trade history.
+- `Strategy` stores setup conditions, entry/exit/risk rules, timeframes, checklists, tags, market, description, and archive state.
+- `StrategyManagementService` validates strategy data and enforces case-insensitive unique names.
+- SQLite create/update checks uniqueness transactionally. Strategies can be listed, archived, restored, and deleted.
+- Trades can be associated with a strategy. Deleting a strategy clears its trade associations without deleting trade history.
 
 ### 5. Trading psychology
 
-- `PsychologyEntry` records mood, confidence, focus, stress, plan adherence, FOMO/revenge-trade flags, emotions, notes, and an optional trade link.
-- Ratings are validated on a 1–5 scale.
-- `PsychologyAnalytics` summarizes the journal and compares linked realized outcomes by plan-adherence flag. This is descriptive correlation, not causal inference or mental-health assessment.
+- `PsychologyEntry` records mood, confidence, focus, stress, plan adherence, FOMO/revenge-trade flags, emotion tags, notes, and optional trade association.
+- Ratings are constrained to 1–5 and entries can be created, edited, filtered, and deleted.
+- `PsychologyAnalytics` summarizes averages, mood counts, plan adherence, FOMO/revenge counts, and linked realized P&L comparisons.
+- These are descriptive correlations, not causal conclusions or mental-health assessments.
 
-### 6. Trading calendar
+### Trading calendar
 
-- `TradingCalendar` builds a month of day summaries containing realized P&L, trade wins/losses, journal counts, and psychology-entry counts.
-- `TradingCalendarService` composes performance, journal, and psychology repositories for a requested month.
+- `TradingCalendar` builds daily summaries for day, Monday-to-Sunday week, month, or custom range.
+- Partial exits are assigned to their actual realization dates.
+- Day summaries include realized net/gross P&L, fees, wins/losses, best/worst trade, average trade P&L, win rate, journal count, and psychology-entry count.
 
 ## Persistence
 
-SQLite schema version 2 includes:
+SQLite schema version 4 includes:
 - `trades`
 - `trade_executions`
 - `journal_entries`
@@ -65,7 +74,7 @@ SQLite schema version 2 includes:
 - `trade_risk_records`
 - `psychology_entries`
 
-Version 1 databases are upgraded by adding `trades.strategy_id` and creating the new feature tables. The migration preserves existing trade and journal records.
+Migrations add the strategy association, advanced feature tables and indexes, and execution notes. Existing trade and journal records are preserved.
 
 ## Validation
 
@@ -77,4 +86,4 @@ flutter analyze
 flutter test
 ```
 
-The repository contains unit tests for FIFO/P&L calculations and initial analytics/risk rules. Tests must be run in a Flutter SDK environment before merging.
+CI is configured to run dependency resolution, static analysis, and tests on pull requests and pushes to the development branch.
