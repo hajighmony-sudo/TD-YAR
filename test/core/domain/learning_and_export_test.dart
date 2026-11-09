@@ -14,6 +14,10 @@ class _MemoryLearningRepository implements LearningRepository {
  @override Future<void> delete(String id) async{values.remove(id);}
 }
 void main(){
+ test('JSON archive importer rejects unsupported formats before database access',() async {
+  final importer=JsonArchiveImportService();
+  await expectLater(importer.importJson('{"format":"unknown","schema_version":2}'),throwsFormatException);
+ });
  test('learning library rejects empty resources',() async {final s=LearningLibraryService(_MemoryLearningRepository());final d=DateTime.utc(2026);final r=LearningResource(id:'1',title:' ',type:LearningContentType.text,createdAt:d,updatedAt:d);await expectLater(s.save(r),throwsArgumentError);});
  test('learning library persists text resources',() async {final repo=_MemoryLearningRepository();final s=LearningLibraryService(repo);final d=DateTime.utc(2026);await s.save(LearningResource(id:'1',title:'Basics',type:LearningContentType.text,body:'Lesson',createdAt:d,updatedAt:d));expect(repo.values['1']?.body,'Lesson');});
  test('CSV escaping handles quotes and commas',(){expect(ReportExportService.csvCell('EUR,"USD"'),'"EUR,""USD"""');});
