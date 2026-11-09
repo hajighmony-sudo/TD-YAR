@@ -38,7 +38,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun NotificationCenterScreen(onOpen: (String) -> Unit) {
+fun NotificationCenterScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
     var notifications by remember { mutableStateOf(NotificationInbox.all(context)) }
     var selected by remember { mutableStateOf("all") }
@@ -54,6 +54,7 @@ fun NotificationCenterScreen(onOpen: (String) -> Unit) {
                 Icon(Icons.Outlined.DoneAll, null)
                 Text("خواندن همه")
             }
+            TextButton(onClick = onSettings) { Text("تنظیمات") }
             TextButton(onClick = { NotificationInbox.clear(context); refresh() }) {
                 Icon(Icons.Outlined.DeleteOutline, null)
             }
