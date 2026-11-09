@@ -33,11 +33,35 @@ class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
       if (duplicate.isNotEmpty) {
         throw StateError('An account with this name already exists.');
       }
-      await txn.insert(
+      final existing = await txn.query(
         'trading_accounts',
-        account.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [account.id],
+        limit: 1,
       );
+      if (existing.isEmpty) {
+        await txn.insert(
+          'trading_accounts',
+          account.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.abort,
+        );
+      } else {
+        await txn.update(
+          'trading_accounts',
+          account.toMap(),
+          where: 'id = ?',
+          whereArgs: [account.id],
+        );
+        // Keep the legacy display label synchronized; account_id remains the
+        // canonical relationship and is never cleared by an upsert.
+        await txn.update(
+          'trades',
+          {'account_label': account.name.trim()},
+          where: 'account_id = ?',
+          whereArgs: [account.id],
+        );
+      }
     });
   }
 
