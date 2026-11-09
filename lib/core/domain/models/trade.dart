@@ -13,6 +13,7 @@ class Trade {
     this.notes = '',
     this.tags = const [],
     this.contractMultiplier = 1,
+    this.strategyId,
   });
 
   final String id;
@@ -23,9 +24,8 @@ class Trade {
   final String? accountLabel;
   final String notes;
   final List<String> tags;
-
-  /// Multiplier used for contract-based instruments. Defaults to 1.
   final double contractMultiplier;
+  final String? strategyId;
 
   Map<String, Object?> toMap() => {
         'id': id,
@@ -37,11 +37,12 @@ class Trade {
         'notes': notes,
         'tags_json': jsonEncode(tags),
         'contract_multiplier': contractMultiplier,
+        'strategy_id': strategyId,
       };
 
   factory Trade.fromMap(Map<String, Object?> map) {
-    final rawTags = map['tags_json'] as String? ?? '[]';
-    final decodedTags = jsonDecode(rawTags) as List<dynamic>;
+    final decodedTags = jsonDecode(map['tags_json'] as String? ?? '[]')
+        as List<dynamic>;
     return Trade(
       id: map['id'] as String,
       symbol: map['symbol'] as String,
@@ -53,6 +54,7 @@ class Trade {
       tags: decodedTags.map((value) => value as String).toList(growable: false),
       contractMultiplier:
           (map['contract_multiplier'] as num?)?.toDouble() ?? 1,
+      strategyId: map['strategy_id'] as String?,
     );
   }
 }
