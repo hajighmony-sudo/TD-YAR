@@ -206,22 +206,19 @@ internal object SnapshotCodec {
                     id = row.optString("id"),
                     name = row.optString("name"),
                     broker = row.optString("broker"),
-                    type = row.optString("type", "REAL"),
-                    baseCurrency = row.optString("baseCurrency", "USD"),
-                    startingBalance = row.optDouble("startingBalance", 10000.0),
+                    type = row.optString("type", ""),
+                    baseCurrency = row.optString("baseCurrency", ""),
+                    startingBalance = row.optDouble("startingBalance", 0.0),
                     archived = row.optBoolean("archived", false),
                 ),
             )
         }
-        if (target.accounts.isEmpty()) {
-            target.accounts.add(TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10000.0))
-        }
-        if (target.accounts.none { !it.archived }) {
+        if (target.accounts.isNotEmpty() && target.accounts.none { !it.archived }) {
             target.accounts[0] = target.accounts[0].copy(archived = false)
         }
-        val requestedAccount = snapshot.optString("selectedAccountId", target.accounts.first().id)
+        val requestedAccount = snapshot.optString("selectedAccountId", "")
         target.selectedAccountId = target.accounts.firstOrNull { it.id == requestedAccount && !it.archived }?.id
-            ?: target.accounts.first { !it.archived }.id
+            ?: target.accounts.firstOrNull { !it.archived }?.id.orEmpty()
         target.txAiEpisodeReviews.clear()
         val reviewRows = snapshot.optJSONArray("txAiEpisodeReviews") ?: JSONArray()
         for (i in 0 until reviewRows.length()) {
@@ -253,15 +250,15 @@ internal object SnapshotCodec {
             target.trades.add(
                 Trade(
                     id = row.optLong("id"),
-                    symbol = row.optString("symbol", "EURUSD"),
+                    symbol = row.optString("symbol", ""),
                     buy = row.optBoolean("buy", true),
-                    lot = row.optDouble("lot", 0.1),
+                    lot = row.optDouble("lot", 0.0),
                     pnl = row.optDouble("pnl", 0.0),
                     strategy = row.optString("strategy", ""),
                     tags = (0 until tags.length()).mapNotNull { tags.optString(it).takeIf(String::isNotBlank) },
                     epochDay = row.optLong("epochDay"),
                     emotion = row.optString("emotion", ""),
-                    accountId = row.optString("accountId", "default"),
+                    accountId = row.optString("accountId", ""),
                     openedAtMillis = row.optLong("openedAtMillis", 0L),
                     closedAtMillis = row.optLong("closedAtMillis", 0L),
                     entryPrice = row.optDouble("entryPrice").takeIf { row.has("entryPrice") },
