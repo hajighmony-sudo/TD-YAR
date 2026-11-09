@@ -46,6 +46,12 @@ object NexNotify {
         show(context, NotifyCategory.SESSION, "یادآوری سشن", "سشن $sessionName طبق ساعت انتخابی تو شروع شده است. وضعیت و یادداشت‌ها را بررسی کن.", "sessions",
             listOf("مشاهده سشن‌ها" to "OPEN"))
 
+    fun sessionState(context: Context, sessionName: String, isOpen: Boolean) {
+        val title = if (isOpen) "سشن $sessionName باز شد" else "سشن $sessionName بسته شد"
+        val body = if (isOpen) "وضعیت سشن‌ها و یادداشت‌های مرتبط را در ژورنال مرور کن." else "زمان سشن $sessionName به پایان رسید؛ اگر لازم است یادداشت جلسه را تکمیل کن."
+        show(context, NotifyCategory.SESSION, title, body, "sessions", listOf("مشاهده سشن‌ها" to "OPEN"))
+    }
+
     fun show(context: Context, category: NotifyCategory, title: String, body: String, route: String,
              actions: List<Pair<String, String>> = emptyList()) {
         val prefs = context.getSharedPreferences("nex_notify_settings", Context.MODE_PRIVATE)
