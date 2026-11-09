@@ -90,6 +90,7 @@ class PerformanceAnalytics {
         symbol: last.symbol,
         direction: last.direction,
         strategyId: last.strategyId,
+        accountLabel: trades.firstWhere((trade) => trade.id == last.tradeId).accountLabel,
         closedAt: last.closedAt,
         netPnl: _sum(group.map((item) => item.netPnl)),
         grossPnl: _sum(group.map((item) => item.grossPnl)),
@@ -98,7 +99,10 @@ class PerformanceAnalytics {
         duration: last.duration,
       ));
     }
-    outcomes.sort((a, b) => a.closedAt.compareTo(b.closedAt));
+    outcomes.sort((a, b) {
+      final byDate = a.closedAt.compareTo(b.closedAt);
+      return byDate != 0 ? byDate : a.tradeId.compareTo(b.tradeId);
+    });
 
     final wins = outcomes.where((item) => item.isWin).toList();
     final losses = outcomes.where((item) => item.isLoss).toList();
@@ -133,6 +137,12 @@ class PerformanceAnalytics {
       bySymbol: _breakdown(outcomes, (item) => item.symbol),
       byStrategy: _breakdown(
         outcomes, (item) => item.strategyId ?? 'بدون استراتژی',
+      ),
+      byAccount: _breakdown(
+        outcomes, (item) => item.accountLabel ?? 'بدون حساب',
+      ),
+      byDirection: _breakdown(
+        outcomes, (item) => item.direction.name,
       ),
       byWeekday: _breakdown(outcomes, (item) => _weekday(item.closedAt.weekday)),
       byHour: _breakdown(
@@ -185,7 +195,10 @@ class PerformanceAnalytics {
         lossCount: values.where((item) => item.isLoss).length,
       );
     }).toList();
-    result.sort((a, b) => b.netPnl.compareTo(a.netPnl));
+    result.sort((a, b) {
+      final byPnl = b.netPnl.compareTo(a.netPnl);
+      return byPnl != 0 ? byPnl : a.key.compareTo(b.key);
+    });
     return List.unmodifiable(result);
   }
 
