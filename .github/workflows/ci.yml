@@ -1,9 +1,18 @@
 name: CI
 
+# One workflow for the whole repository: Rust core, Android app, Flutter modules.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   rust:
@@ -87,3 +96,45 @@ jobs:
       - run: dart format lib test
       - run: flutter analyze --no-pub --no-fatal-infos
       - run: flutter test --no-pub
+
+  flutter-journal:
+    # Root Flutter project (offline journal foundation), present on main and the Flutter branches.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Detect Flutter project
+        id: detect
+        run: |
+          if [ -f pubspec.yaml ]; then echo "found=true" >> "$GITHUB_OUTPUT"; else echo "found=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: subosito/flutter-action@v2
+        if: steps.detect.outputs.found == 'true'
+        with:
+          channel: stable
+          cache: true
+      - if: steps.detect.outputs.found == 'true'
+        run: flutter pub get
+      - if: steps.detect.outputs.found == 'true'
+        run: flutter analyze --no-fatal-infos
+      - if: steps.detect.outputs.found == 'true'
+        run: flutter test
+
+  mql-files:
+    # Cheap sanity check for the MetaTrader bridge Expert Advisors (they are compiled inside MetaEditor, not here).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          test -f metatrader/TradixBridge.mq5
+          test -f metatrader/TradixBridge.mq4
+          grep -q "WebRequest" metatrader/TradixBridge.mq5
+          grep -q "WebRequest" metatrader/TradixBridge.mq4
+
+  all-green:
+    # Single required check for branch protection.
+    if: always()
+    needs: [rust, android, flutter-tx-ai, flutter-journal, mql-files]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo '${{ toJSON(needs) }}'
+          if echo '${{ toJSON(needs) }}' | grep -q '"result": "\(failure\|cancelled\)"'; then exit 1; fi

@@ -242,7 +242,7 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun TxBottomBar(current: String, onNavigate: (String) -> Unit) {
-    val moreRoutes = setOf("more", "sessions", "strategies", "calendar", "settings", "tags", "accounts", "trades", "weekly", "weekly_reminder", "calculator", "risk_lab", "tx_ai", "tx_ai_legacy")
+    val moreRoutes = setOf("more", "sessions", "strategies", "calendar", "settings", "tags", "accounts", "trades", "weekly", "weekly_reminder", "calculator", "risk_lab", "metatrader", "tx_ai", "tx_ai_legacy")
     val shape = RoundedCornerShape(26.dp)
     val t = rememberInfiniteTransition(label = "fab")
     val pulse by t.animateFloat(
