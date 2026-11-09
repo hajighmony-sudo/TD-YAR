@@ -5,6 +5,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -30,6 +39,8 @@ import com.tradenex.app.ui.screens.InsightsScreen
 import com.tradenex.app.ui.screens.EducationScreen
 import com.tradenex.app.ui.screens.HomeScreen
 import com.tradenex.app.ui.screens.MoreScreen
+import com.tradenex.app.ui.screens.NotificationCenterScreen
+import com.tradenex.app.ui.screens.NotificationSettingsScreen
 import com.tradenex.app.ui.screens.PerformanceScreen
 import com.tradenex.app.ui.screens.PositionsScreen
 import com.tradenex.app.ui.screens.PsychologyScreen
@@ -49,6 +60,11 @@ fun AppNav(startDestination: String = "home") {
 
     TxBackground {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End) {
+                IconButton(onClick = { nav.navigate("notifications") { launchSingleTop = true } }) {
+                    Icon(Icons.Outlined.Notifications, contentDescription = "مرکز اعلان‌ها")
+                }
+            }
             Box(Modifier.weight(1f)) {
                 NavHost(
                     navController = nav,
@@ -92,9 +108,11 @@ fun AppNav(startDestination: String = "home") {
                     composable("psychology") { PsychologyScreen(nav) }
                     composable("tags") { TagsScreen(nav) }
                     composable("settings") { SettingsScreen(nav) }
+                    composable("notifications") { NotificationCenterScreen(onOpen = { target -> nav.navigate(target) { launchSingleTop = true } }, onSettings = { nav.navigate("notification_settings") }) }
+                    composable("notification_settings") { NotificationSettingsScreen() }
                 }
             }
-            if (route != "add") {
+            if (route != "add" && route != "notifications" && route != "notification_settings") {
                 TxBottomBar(current = route) { target ->
                     nav.navigate(target) {
                         launchSingleTop = true
