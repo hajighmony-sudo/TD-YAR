@@ -138,11 +138,14 @@ fun EducationScreen(nav: NavController) {
     val scanner = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val scanned = IntentIntegrator.parseActivityResult(Activity.RESULT_OK, result.data)?.contents
-            val imported = runCatching { scanned?.let { EducationQr.decodePayload(it, txPassword) } }.getOrNull()
+            val decoded = runCatching { scanned?.let { EducationQr.decodePayload(it, txPassword) } }
+            val imported = decoded.getOrNull()
             if (imported != null) {
                 EducationStore.importTextLesson(imported.first, imported.second)
                 message = "درس متنی با موفقیت دریافت شد."
-            } else if (scanned != null) message = "این QR متعلق به یک درس TRADIX نیست یا قابل خواندن نیست."
+            } else if (scanned != null) {
+                message = decoded.exceptionOrNull()?.message ?: "این QR متعلق به یک درس TRADIX نیست یا قابل خواندن نیست."
+            }
         }
     }
 
@@ -263,7 +266,7 @@ fun EducationScreen(nav: NavController) {
                         }
                         context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری QR رمزنگاری‌شده"))
                     }.onFailure { message = it.message ?: "اشتراک‌گذاری انجام نشد." }
-                }) { Text("اشتراک‌گذاری QR و فایل‌ها", color = Tx.Gold) }
+                }) { Text("اشتراک‌گذاری QR رمزنگاری‌شده", color = Tx.Gold) }
             },
             dismissButton = { TextButton(onClick = { qrLesson = null; qrBitmap = null }) { Text("بستن", color = Tx.Muted) } },
         )
