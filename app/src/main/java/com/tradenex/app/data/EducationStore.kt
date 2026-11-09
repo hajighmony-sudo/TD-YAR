@@ -119,7 +119,15 @@ object EducationStore {
     }
 
     fun importTextLesson(title: String, blocks: List<EducationBlock>) {
-        lessons.add(0, EducationLesson(System.currentTimeMillis(), title, System.currentTimeMillis(), blocks))
+        importLesson(EducationLesson(System.currentTimeMillis(), title, System.currentTimeMillis(), blocks))
+    }
+
+    fun importLesson(lesson: EducationLesson) {
+        val imported = lesson.copy(
+            id = System.currentTimeMillis(),
+            blocks = lesson.blocks.mapIndexed { index, block -> block.copy(id = System.nanoTime() + index) },
+        )
+        lessons.add(0, imported)
         persist()
     }
 
