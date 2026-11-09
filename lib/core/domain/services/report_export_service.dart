@@ -160,7 +160,7 @@ class ReportExportService {
         'strategy_id': strategyId,
       },
       'trades': selectedTrades,
-      'journal_entries': journals.map((entry) => entry.toMap()).toList(),
+      'journal_entries': journals,
       'strategies': strategies.map((strategy) => strategy.toMap()).toList(),
       'playbooks': playbooks,
       'attachments': attachments,
