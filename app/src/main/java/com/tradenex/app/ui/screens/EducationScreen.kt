@@ -63,6 +63,7 @@ import com.tradenex.app.data.EducationBlockType
 import com.tradenex.app.data.EducationLesson
 import com.tradenex.app.data.EducationQr
 import com.tradenex.app.data.EducationStore
+import com.tradenex.app.data.AppState
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
@@ -170,8 +171,8 @@ fun EducationScreen(nav: NavController) {
                     TxField(searchQuery, { searchQuery = it }, "جست‌وجوی عنوان، دسته یا برچسب")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         categories.forEach { TxChip(it, filter == it, { filter = it }) }
-                        TxChip("★ محبوب‌ها", favoritesOnly, { favoritesOnly = !favoritesOnly })
                     }
+                    TxChip("★ محبوب‌ها", favoritesOnly, { favoritesOnly = !favoritesOnly })
                     Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): همه‌ی درس‌ها و فایل‌هایشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. رمز اختیاری است ولی امنیت واقعی را همان می‌دهد.", color = Tx.Muted, fontSize = 10.sp)
                     TxField(txPassword, { txPassword = it }, "رمز بسته (اختیاری)")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
