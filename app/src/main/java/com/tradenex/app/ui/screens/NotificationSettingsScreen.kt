@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tradenex.app.notifications.NotifyCategory
+import com.tradenex.app.notifications.NexNotify
+import androidx.compose.material3.Button
 
 @Composable
 fun NotificationSettingsScreen() {
@@ -45,6 +47,7 @@ fun NotificationSettingsScreen() {
                 })
             }
         }
+        Button(onClick = { NexNotify.show(context, NotifyCategory.JOURNAL, "اعلان آزمایشی NEX", "مرکز اعلان‌ها و دکمه‌های تعاملی آماده استفاده هستند.", "notifications", listOf("بازکردن مرکز" to "OPEN")) }, modifier = Modifier.fillMaxWidth()) { Text("ارسال اعلان آزمایشی") }
         NotifyCategory.entries.forEach { category ->
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
