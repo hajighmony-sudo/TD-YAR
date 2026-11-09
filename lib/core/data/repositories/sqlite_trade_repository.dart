@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/models/trade.dart';
@@ -306,6 +308,27 @@ class SqliteTradeRepository implements TradeRepository {
         where: 'owner_type = ? AND owner_id = ?',
         whereArgs: ['trade', id],
       );
+      final journals = await txn.query(
+        'journal_entries',
+        columns: ['id', 'linked_trade_ids_json'],
+      );
+      for (final journal in journals) {
+        final linkedIds = (jsonDecode(
+          journal['linked_trade_ids_json'] as String? ?? '[]',
+        ) as List<dynamic>).whereType<String>().toList();
+        if (linkedIds.contains(id)) {
+          linkedIds.removeWhere((tradeId) => tradeId == id);
+          await txn.update(
+            'journal_entries',
+            {
+              'linked_trade_ids_json': jsonEncode(linkedIds),
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [journal['id']],
+          );
+        }
+      }
       await txn.delete(
         'trade_executions',
         where: 'trade_id = ?',
