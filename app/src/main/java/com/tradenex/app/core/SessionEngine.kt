@@ -27,6 +27,7 @@ data class SessionState(
     val minutesToChange: Int,
     val localStart: Int,
     val length: Int,
+    val nextChange: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC),
 )
 
 data class OverlapInfo(val a: String, val b: String, val minutes: Int, val percent: Int, val activeNow: Boolean)
@@ -74,6 +75,7 @@ object SessionEngine {
             minutesToChange = Duration.between(now, nextBoundary.toInstant()).toMinutes().toInt().coerceAtLeast(0),
             localStart = displayStart.hour * 60 + displayStart.minute,
             length = duration,
+            nextChange = nextBoundary,
         )
     }
 
