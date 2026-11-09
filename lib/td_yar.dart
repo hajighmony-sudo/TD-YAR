@@ -51,3 +51,5 @@ export 'core/domain/models/learning_resource.dart';
 export 'core/domain/services/learning_library_service.dart';
 export 'core/domain/services/report_export_service.dart';
 export 'core/domain/services/database_backup_service.dart';
+
+export 'core/td_yar_services.dart';
