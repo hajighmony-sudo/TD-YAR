@@ -94,6 +94,7 @@ class _MemoryTradeRepository implements TradeRepository {
     TradeDirection? direction,
     String? strategyId,
     String? accountLabel,
+    String? accountId,
   }) async => trades.where((trade) {
         if (symbol != null && trade.symbol.toUpperCase() != symbol.toUpperCase()) {
           return false;
@@ -101,6 +102,7 @@ class _MemoryTradeRepository implements TradeRepository {
         if (direction != null && trade.direction != direction) return false;
         if (strategyId != null && trade.strategyId != strategyId) return false;
         if (accountLabel != null && trade.accountLabel != accountLabel) return false;
+        if (accountId != null && trade.accountId != accountId) return false;
         return true;
       }).toList();
 
