@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:td_yar/core/data/local/app_database.dart';
+import 'package:td_yar/core/domain/services/json_archive_import_service.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -111,4 +112,52 @@ void main() {
     final expected = path.join(temporaryDirectory.path, 'td_yar.db');
     expect(await AppDatabase.instance.databaseFile, expected);
   });
+  test('JSON archive import rolls back all rows when a duplicate appears', () async {
+    final importer = JsonArchiveImportService(database: AppDatabase.instance);
+    final now = DateTime.utc(2026, 1, 1).toIso8601String();
+    final archive = {
+      'format': 'td-yar-export',
+      'schema_version': 2,
+      'accounts': [
+        {
+          'id': 'duplicate-account',
+          'name': 'Duplicate A',
+          'currency': 'USD',
+          'initial_balance': 100,
+          'is_archived': 0,
+          'notes': '',
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'id': 'duplicate-account',
+          'name': 'Duplicate B',
+          'currency': 'USD',
+          'initial_balance': 200,
+          'is_archived': 0,
+          'notes': '',
+          'created_at': now,
+          'updated_at': now,
+        },
+      ],
+      'strategies': [],
+      'playbooks': [],
+      'attachments': [],
+      'trades': [],
+      'journal_entries': [],
+      'psychology_entries': [],
+      'risk_profiles': [],
+      'trade_risk_records': [],
+      'learning_resources': [],
+      'trading_sessions': [],
+      'audit_events': [],
+      'settings': <String, String>{},
+    };
+
+    await expectLater(
+      importer.importJson(archive.toString().replaceAll("'", '"')),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
 }
