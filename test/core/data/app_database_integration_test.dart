@@ -159,6 +159,13 @@ void main() {
       importer.importJson(jsonEncode(archive)),
       throwsA(isA<DatabaseException>()),
     );
+
+    final insertedRows = await (await AppDatabase.instance.database).query(
+      'trading_accounts',
+      where: 'id = ?',
+      whereArgs: ['duplicate-account'],
+    );
+    expect(insertedRows, isEmpty);
   });
 
 }
