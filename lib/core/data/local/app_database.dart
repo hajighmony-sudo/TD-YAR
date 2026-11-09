@@ -1,0 +1,113 @@
+import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
+
+class AppDatabase {
+  AppDatabase._();
+
+  static final AppDatabase instance = AppDatabase._();
+
+  static const String _databaseName = 'td_yar.db';
+  static const int _databaseVersion = 1;
+
+  Database? _database;
+
+  Future<Database> get database async {
+    final existing = _database;
+    if (existing != null) return existing;
+
+    final databaseDirectory = await getDatabasesPath();
+    final databasePath = path.join(databaseDirectory, _databaseName);
+    final opened = await openDatabase(
+      databasePath,
+      version: _databaseVersion,
+      onCreate: _createSchema,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
+    );
+    _database = opened;
+    return opened;
+  }
+
+  Future<void> _createSchema(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE trades (
+        id TEXT PRIMARY KEY,
+        symbol TEXT NOT NULL,
+        direction TEXT NOT NULL CHECK (direction IN ('long', 'short')),
+        account_label TEXT,
+        notes TEXT NOT NULL DEFAULT '',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        contract_multiplier REAL NOT NULL DEFAULT 1 CHECK (contract_multiplier > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE trade_executions (
+        id TEXT PRIMARY KEY,
+        trade_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('entry', 'exit')),
+        quantity REAL NOT NULL CHECK (quantity > 0),
+        price REAL NOT NULL CHECK (price > 0),
+        fee REAL NOT NULL DEFAULT 0 CHECK (fee >= 0),
+        executed_at TEXT NOT NULL,
+        FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX idx_trade_executions_trade_time '
+      'ON trade_executions(trade_id, executed_at)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_trades_symbol_created '
+      'ON trades(symbol, created_at)',
+    );
+
+    await db.execute('''
+      CREATE TABLE journal_entries (
+        id TEXT PRIMARY KEY,
+        entry_date TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        linked_trade_ids_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE playbooks (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        checklist_json TEXT NOT NULL DEFAULT '[]',
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE attachments (
+        id TEXT PRIMARY KEY,
+        owner_type TEXT NOT NULL,
+        owner_id TEXT NOT NULL,
+        local_path TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX idx_attachments_owner ON attachments(owner_type, owner_id)',
+    );
+  }
+
+  Future<void> close() async {
+    final current = _database;
+    _database = null;
+    if (current != null) await current.close();
+  }
+}
