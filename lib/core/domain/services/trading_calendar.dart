@@ -88,6 +88,7 @@ class TradingCalendar {
         symbol: last.symbol,
         direction: last.direction,
         strategyId: last.strategyId,
+        accountLabel: last.accountLabel,
         closedAt: last.closedAt,
         netPnl: items.fold<double>(0, (sum, item) => sum + item.netPnl),
         grossPnl: items.fold<double>(0, (sum, item) => sum + item.grossPnl),
