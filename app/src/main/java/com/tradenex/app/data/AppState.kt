@@ -80,6 +80,8 @@ data class AppSettings(
     val startBalance: Double = 10_000.0,
     val defaultLot: Double = 0.10,
     val riskPercent: Double = 1.0,
+    val dailyLossLimitPercent: Double = 3.0,
+    val maxTradesPerDay: Int = 5,
     val haptics: Boolean = true,
     val animations: Int = 1,
     val accent: Int = 0,
