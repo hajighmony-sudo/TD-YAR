@@ -36,9 +36,9 @@ SQLite schema version is **8**. Risk profiles are linked to manual accounts, and
 - `lib/core/data`: repository contracts and SQLite implementations
 - `lib/core/td_yar_services.dart`: shared composition root wiring all repositories and domain services
 - `lib/features`: reserved for future presentation modules
-- `test`: domain unit tests
+- `test`: domain unit tests plus SQLite integration tests (schema, foreign keys, audit immutability, archive rollback, backup/restore and migrations)
 
-The domain layer does not depend on Flutter widgets. SQLite is the initial local-first storage layer. Session calculations use IANA timezone rules for daylight-saving transitions.
+The domain layer does not depend on Flutter widgets. SQLite is the initial local-first storage layer, opened through a single-flight connection manager with foreign keys and WAL enabled. `TdYarServices.initialize()` prepares the shared database and `close()` releases it. Session calculations use IANA timezone rules for daylight-saving transitions.
 
 ## Getting started
 
