@@ -283,7 +283,7 @@ class AppDatabase {
       final entity = spec['entity']!;
       final key = spec['key']!;
       for (final operation in ['insert', 'update', 'delete']) {
-        final trigger = 'audit_${table}_${operation}';
+        final trigger = 'audit_${table}_$operation';
         final row = operation == 'delete' ? 'OLD' : 'NEW';
         await db.execute('''
           CREATE TRIGGER IF NOT EXISTS $trigger
