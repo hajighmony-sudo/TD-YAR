@@ -51,12 +51,22 @@ private fun weekStartOf(epochDay: Long): Long = epochDay - Analytics.column(epoc
 @Composable
 fun HeatmapPeriods(trades: List<Trade>) {
     var monthly by remember { mutableStateOf(false) }
-    var picked by remember(monthly) { mutableStateOf<PeriodCell?>(null) }
+    var daily by remember { mutableStateOf(false) }
+    var picked by remember(monthly, daily) { mutableStateOf<PeriodCell?>(null) }
     val hide = AppState.settings.hideBalance
     val today = AppState.today()
 
-    val cells = remember(trades, monthly, today) {
-        if (!monthly) {
+    val cells = remember(trades, monthly, daily, today) {
+        if (daily) {
+            val byDay = trades.groupBy { it.epochDay }
+            (34 downTo 0).map { offset ->
+                val day = today - offset
+                val date = LocalDate.ofEpochDay(day)
+                val j = JalaliCalendar.fromGregorian(date)
+                val list = byDay[day].orEmpty()
+                PeriodCell(fa(j.day), jalaliText(date), if (list.isEmpty()) null else list.sumOf { it.pnl }, list.size)
+            }
+        } else if (!monthly) {
             val ws = weekStartOf(today)
             val sums = trades.groupBy { weekStartOf(it.epochDay) }
             (11 downTo 0).map { i ->
@@ -85,12 +95,13 @@ fun HeatmapPeriods(trades: List<Trade>) {
 
     GlassCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            SectionTitle(if (monthly) "نقشه حرارتی ماهانه" else "نقشه حرارتی هفتگی", if (monthly) "۱۲ ماه شمسی" else "۱۲ هفته · شروع از شنبه")
+            SectionTitle(if (daily) "نقشه حرارتی روزانه" else if (monthly) "نقشه حرارتی ماهانه" else "نقشه حرارتی هفتگی", if (daily) "۳۵ روز اخیر" else if (monthly) "۱۲ ماه شمسی" else "۱۲ هفته · شروع از شنبه")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TxChip("هفتگی", !monthly, { monthly = false })
-                TxChip("ماهانه", monthly, { monthly = true })
+                TxChip("روزانه", daily, { daily = true })
+                TxChip("هفتگی", !daily && !monthly, { daily = false; monthly = false })
+                TxChip("ماهانه", monthly && !daily, { daily = false; monthly = true })
             }
-            cells.chunked(4).forEach { row ->
+            cells.chunked(if (daily) 7 else 4).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     row.forEach { cell ->
                         val pnl = cell.pnl
