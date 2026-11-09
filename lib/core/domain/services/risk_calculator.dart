@@ -85,6 +85,7 @@ class RiskCalculator {
       plannedRiskWithinLimit: plannedRiskAmount <= maxTradeRisk,
       dailyLossWithinLimit: realizedDailyLoss < maxDailyLoss ||
           (maxDailyLoss == 0 && realizedDailyLoss == 0),
+      plannedRiskWithinDailyAllowance: plannedRiskAmount <= remaining,
       tradeCountWithinLimit: tradesTakenToday < profile.maxTradesPerDay,
       maxTradeRiskAmount: maxTradeRisk,
       maxDailyLossAmount: maxDailyLoss,
@@ -122,6 +123,7 @@ class RiskLimitCheck {
   const RiskLimitCheck({
     required this.plannedRiskWithinLimit,
     required this.dailyLossWithinLimit,
+    required this.plannedRiskWithinDailyAllowance,
     required this.tradeCountWithinLimit,
     required this.maxTradeRiskAmount,
     required this.maxDailyLossAmount,
@@ -131,6 +133,7 @@ class RiskLimitCheck {
 
   final bool plannedRiskWithinLimit;
   final bool dailyLossWithinLimit;
+  final bool plannedRiskWithinDailyAllowance;
   final bool tradeCountWithinLimit;
   final double maxTradeRiskAmount;
   final double maxDailyLossAmount;
@@ -138,5 +141,6 @@ class RiskLimitCheck {
   final int remainingTradeSlots;
 
   bool get allLimitsWithinRange =>
-      plannedRiskWithinLimit && dailyLossWithinLimit && tradeCountWithinLimit;
+      plannedRiskWithinLimit && dailyLossWithinLimit &&
+      plannedRiskWithinDailyAllowance && tradeCountWithinLimit;
 }
