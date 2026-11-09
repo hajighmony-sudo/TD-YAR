@@ -49,6 +49,7 @@ class PerformanceAnalytics {
         final quantity = cumulative.closedQuantity - previousClosedQuantity;
         final realization = TradeRealization(
           tradeId: trade.id,
+          executionId: execution.id,
           symbol: trade.symbol,
           direction: trade.direction,
           strategyId: trade.strategyId,
@@ -66,7 +67,12 @@ class PerformanceAnalytics {
       }
     }
 
-    allRealizations.sort((a, b) => a.closedAt.compareTo(b.closedAt));
+    allRealizations.sort((a, b) {
+      final byDate = a.closedAt.compareTo(b.closedAt);
+      if (byDate != 0) return byDate;
+      final byTrade = a.tradeId.compareTo(b.tradeId);
+      return byTrade != 0 ? byTrade : a.executionId.compareTo(b.executionId);
+    });
     final filtered = allRealizations.where((item) {
       if (from != null && item.closedAt.isBefore(from)) return false;
       if (to != null && item.closedAt.isAfter(to)) return false;
