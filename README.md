@@ -8,7 +8,7 @@ TD-YAR is a record-keeping, review and learning tool. Users manually enter all t
 
 ### Core foundations (1–5)
 1. Manual long/short trade journal with multiple entry/exit fills, FIFO matching, fee allocation, notes, tags and strategy association.
-2. Performance analytics with dated partial-exit realizations, date-range reports, drawdown, expectancy, profit factor and breakdowns by symbol, strategy, account, direction, weekday and hour.
+2. Performance analytics with dated partial-exit realizations, daily/weekly/yearly realized-equity OHLC candles, date-range reports, drawdown, expectancy, profit factor and breakdowns by symbol, strategy, account, direction, weekday and hour.
 3. User-authored strategy library with setup/entry/exit/risk rules, checklists, tags, archive lifecycle and trade association.
 4. Daily journal with pre-market plan, market context, execution review, mistakes, strengths, lessons, next-day plan, goals, tags and linked trades.
 5. Timezone-aware market sessions for Sydney, Tokyo, London and New York, including open/closed status, next session times, custom schedules, overnight sessions, daylight-saving changes and overlap windows.
