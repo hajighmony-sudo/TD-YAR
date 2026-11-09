@@ -106,10 +106,18 @@ class PerformanceReport {
 
   double get averageTrade => totalTrades == 0 ? 0 : netPnl / totalTrades;
   double get grossProfit =>
+      outcomes.where((item) => item.grossPnl > 0).fold<double>(
+        0, (sum, item) => sum + item.grossPnl,
+      );
+  double get grossLoss =>
+      outcomes.where((item) => item.grossPnl < 0).fold<double>(
+        0, (sum, item) => sum + item.grossPnl.abs(),
+      );
+  double get netProfit =>
       outcomes.where((item) => item.netPnl > 0).fold<double>(
         0, (sum, item) => sum + item.netPnl,
       );
-  double get grossLoss =>
+  double get netLoss =>
       outcomes.where((item) => item.netPnl < 0).fold<double>(
         0, (sum, item) => sum + item.netPnl.abs(),
       );
