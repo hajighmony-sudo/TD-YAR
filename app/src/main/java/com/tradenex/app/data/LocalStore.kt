@@ -68,6 +68,33 @@ internal class LocalStore(context: Context) :
 }
 
 internal object SnapshotCodec {
+    private fun encodeStrategyAttachments(items: List<StrategyAttachment>): JSONArray = JSONArray().apply {
+        items.forEach { attachment ->
+            put(JSONObject().apply {
+                put("id", attachment.id)
+                put("uri", attachment.uri)
+                put("mimeType", attachment.mimeType)
+                put("displayName", attachment.displayName)
+                put("sizeBytes", attachment.sizeBytes)
+            })
+        }
+    }
+
+    private fun decodeStrategyAttachments(row: JSONObject): List<StrategyAttachment> {
+        val items = row.optJSONArray("attachments") ?: JSONArray()
+        return (0 until items.length()).mapNotNull { index ->
+            val item = items.optJSONObject(index) ?: return@mapNotNull null
+            val uri = item.optString("uri")
+            if (uri.isBlank()) return@mapNotNull null
+            StrategyAttachment(
+                id = item.optLong("id", System.currentTimeMillis() + index),
+                uri = uri,
+                mimeType = item.optString("mimeType", "*/*"),
+                displayName = item.optString("displayName", "فایل پیوست"),
+                sizeBytes = item.optLong("sizeBytes", 0L).coerceAtLeast(0L),
+            )
+        }
+    }
     fun encode(
         trades: List<Trade>,
         positions: List<JournalPosition>,
@@ -158,6 +185,7 @@ internal object SnapshotCodec {
                 put(JSONObject().apply {
                     put("id", s.id); put("name", s.name); put("rules", JSONArray(s.rules))
                     put("active", s.active); put("version", s.version)
+                    put("attachments", encodeStrategyAttachments(s.attachments))
                 })
             }
         })
@@ -166,6 +194,7 @@ internal object SnapshotCodec {
                 put(JSONObject().apply {
                     put("id", v.id); put("strategyId", v.strategyId); put("version", v.version)
                     put("name", v.name); put("rules", JSONArray(v.rules)); put("createdAt", v.createdAt)
+                    put("attachments", encodeStrategyAttachments(v.attachments))
                 })
             }
         })
@@ -327,6 +356,7 @@ internal object SnapshotCodec {
                     (0 until rules.length()).mapNotNull { rules.optString(it).takeIf(String::isNotBlank) },
                     row.optBoolean("active", true),
                     row.optInt("version", 1),
+                    decodeStrategyAttachments(row),
                 ),
             )
         }
@@ -343,6 +373,7 @@ internal object SnapshotCodec {
                     name = row.optString("name"),
                     rules = (0 until rules.length()).mapNotNull { rules.optString(it).takeIf(String::isNotBlank) },
                     createdAt = row.optLong("createdAt"),
+                    attachments = decodeStrategyAttachments(row),
                 ),
             )
         }
@@ -363,8 +394,8 @@ internal object SnapshotCodec {
                 language = s.optInt("language", 0), showGlobe = s.optBoolean("showGlobe", true),
                 tzMode = s.optInt("tzMode", 2), reminderOn = s.optBoolean("reminderOn", true),
                 reminderHour = s.optInt("reminderHour", 22).coerceIn(0, 23),
-                newsImpact = s.optInt("newsImpact", 0), startBalance = s.optDouble("startBalance", 10000.0),
-                defaultLot = s.optDouble("defaultLot", 0.1), riskPercent = s.optDouble("riskPercent", 1.0),
+                newsImpact = s.optInt("newsImpact", 0), startBalance = s.optDouble("startBalance", 0.0),
+                defaultLot = s.optDouble("defaultLot", 0.0), riskPercent = s.optDouble("riskPercent", 1.0),
                 dailyLossLimitPercent = s.optDouble("dailyLossLimitPercent", 3.0).coerceIn(0.5, 20.0),
                 maxTradesPerDay = s.optInt("maxTradesPerDay", 5).coerceIn(1, 100),
                 haptics = s.optBoolean("haptics", true), animations = s.optInt("animations", 1),
