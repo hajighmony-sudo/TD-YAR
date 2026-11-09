@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:td_yar/core/data/local/app_database.dart';
 import 'package:td_yar/core/domain/services/json_archive_import_service.dart';
+import 'package:td_yar/core/domain/services/database_backup_service.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -166,6 +167,43 @@ void main() {
     );
     expect(insertedRows, isEmpty);
   });
+  test('backup is validated and restore replaces the database atomically', () async {
+    final db = await AppDatabase.instance.database;
+    await db.update(
+      'trading_accounts',
+      {'name': 'Before Backup'},
+      where: 'id = ?',
+      whereArgs: ['account-1'],
+    );
+
+    final backupService = DatabaseBackupService(database: AppDatabase.instance);
+    final backup = await backupService.createBackup(
+      path.join(temporaryDirectory.path, 'backups', 'td-yar-snapshot.db'),
+    );
+    expect(await backup.exists(), isTrue);
+
+    final afterBackup = await AppDatabase.instance.database;
+    await afterBackup.update(
+      'trading_accounts',
+      {'name': 'After Backup'},
+      where: 'id = ?',
+      whereArgs: ['account-1'],
+    );
+
+    await backupService.restoreBackup(backup.path);
+    final restored = await (await AppDatabase.instance.database).query(
+      'trading_accounts',
+      where: 'id = ?',
+      whereArgs: ['account-1'],
+    );
+    expect(restored.single['name'], 'Before Backup');
+
+    await expectLater(
+      backupService.restoreBackup(await AppDatabase.instance.databaseFile),
+      throwsArgumentError,
+    );
+  });
+
   test('schema-v7 databases migrate risk-profile account links to v8', () async {
     await AppDatabase.instance.close();
     final filePath = await AppDatabase.instance.databaseFile;
