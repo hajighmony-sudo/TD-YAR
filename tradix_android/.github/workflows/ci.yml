@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - run: cargo test --manifest-path rust/Cargo.toml
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - name: Install Android NDK
+        run: sdkmanager --install "ndk;27.0.12077973"
+      - name: Build Rust shared library for Android ARM64
+        run: |
+          cargo install cargo-ndk --locked
+          cd rust
+          cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
+      - uses: actions/upload-artifact@v6
+        with:
+          name: tradenex-rust-android-libs
+          path: app/src/main/jniLibs
+          if-no-files-found: error
+          retention-days: 7
+
+  android:
+    needs: rust
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v6
+        with:
+          name: tradenex-rust-android-libs
+          path: app/src/main/jniLibs
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Bootstrap Flutter add-to-app module
+        run: bash scripts/bootstrap_flutter_module.sh
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.14.3'
+          cache-provider: basic
+      - run: gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace
+      - uses: actions/upload-artifact@v6
+        if: success()
+        with:
+          name: TRADIX-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v6
+        if: success()
+        with:
+          name: TRADIX-release-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  flutter-tx-ai:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: flutter_fx
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format lib test
+      - run: flutter analyze --no-pub --no-fatal-infos
+      - run: flutter test --no-pub
