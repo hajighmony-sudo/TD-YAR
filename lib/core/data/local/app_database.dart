@@ -6,7 +6,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'td_yar.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   Database? _database;
 
@@ -51,6 +51,15 @@ class AppDatabase {
       CREATE TABLE journal_entries (
         id TEXT PRIMARY KEY, entry_date TEXT NOT NULL,
         title TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '',
+        pre_market_plan TEXT NOT NULL DEFAULT '',
+        market_context TEXT NOT NULL DEFAULT '',
+        execution_review TEXT NOT NULL DEFAULT '',
+        mistakes TEXT NOT NULL DEFAULT '',
+        strengths TEXT NOT NULL DEFAULT '',
+        lessons TEXT NOT NULL DEFAULT '',
+        next_day_plan TEXT NOT NULL DEFAULT '',
+        goals_json TEXT NOT NULL DEFAULT '[]',
+        tags_json TEXT NOT NULL DEFAULT '[]',
         linked_trade_ids_json TEXT NOT NULL DEFAULT '[]',
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL
       )
@@ -84,6 +93,36 @@ class AppDatabase {
       await db.execute(
         "ALTER TABLE trade_executions ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
       );
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN pre_market_plan TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN market_context TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN execution_review TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN mistakes TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN strengths TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN lessons TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN next_day_plan TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN goals_json TEXT NOT NULL DEFAULT '[]'",
+      );
+      await db.execute(
+        "ALTER TABLE journal_entries ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _createSessionTable(db);
     }
   }
 
@@ -144,7 +183,29 @@ class AppDatabase {
         FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE SET NULL
       )
     ''');
+    await _createSessionTable(db);
     await _createIndexes(db);
+  }
+
+  Future<void> _createSessionTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS trading_sessions (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        timezone_id TEXT NOT NULL,
+        open_hour INTEGER NOT NULL CHECK (open_hour BETWEEN 0 AND 23),
+        open_minute INTEGER NOT NULL CHECK (open_minute BETWEEN 0 AND 59),
+        close_hour INTEGER NOT NULL CHECK (close_hour BETWEEN 0 AND 23),
+        close_minute INTEGER NOT NULL CHECK (close_minute BETWEEN 0 AND 59),
+        weekdays_json TEXT NOT NULL DEFAULT '[1,2,3,4,5]',
+        is_enabled INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_trading_sessions_enabled ON trading_sessions(is_enabled)',
+    );
   }
 
   Future<void> _createIndexes(Database db) async {
