@@ -265,6 +265,7 @@ class AppDatabase {
   Future<void> _createAuditTriggers(Database db) async {
     const auditedTables = <Map<String, String>>[
       {'table': 'trades', 'entity': 'trade', 'key': 'id'},
+      {'table': 'attachments', 'entity': 'attachment', 'key': 'id'},
       {'table': 'trade_executions', 'entity': 'trade_execution', 'key': 'id'},
       {'table': 'journal_entries', 'entity': 'journal_entry', 'key': 'id'},
       {'table': 'strategies', 'entity': 'strategy', 'key': 'id'},
