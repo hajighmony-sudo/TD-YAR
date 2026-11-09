@@ -36,11 +36,12 @@ class RiskManagementService {
     final report = await _performanceService.buildReport(
       from: start,
       to: end,
+      accountId: profile.accountId,
     );
 
     // Count unique trades with at least one entry fill on the selected day,
     // not just trades that happened to be created in the app on that day.
-    final trades = await _tradeRepository.getTrades();
+    final trades = await _tradeRepository.getTrades(accountId: profile.accountId);
     final executionLists = await Future.wait(
       trades.map((trade) => _tradeRepository.getExecutions(trade.id)),
     );
