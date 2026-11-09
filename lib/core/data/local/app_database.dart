@@ -6,7 +6,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'td_yar.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 7;
 
   Database? _database;
 
@@ -32,7 +32,8 @@ class AppDatabase {
       CREATE TABLE trades (
         id TEXT PRIMARY KEY, symbol TEXT NOT NULL,
         direction TEXT NOT NULL CHECK (direction IN ('long', 'short')),
-        account_label TEXT, notes TEXT NOT NULL DEFAULT '',
+        account_label TEXT, account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL,
+        notes TEXT NOT NULL DEFAULT '',
         tags_json TEXT NOT NULL DEFAULT '[]',
         contract_multiplier REAL NOT NULL DEFAULT 1 CHECK (contract_multiplier > 0),
         strategy_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -128,6 +129,42 @@ class AppDatabase {
       await _createSessionTable(db);
     }
     if (oldVersion < 6) await _createFoundationTables(db);
+    if (oldVersion < 7) await _upgradeTradeAccounts(db);
+  }
+
+  Future<void> _upgradeTradeAccounts(Database db) async {
+    // Preserve legacy labels while assigning a real account record to each.
+    await db.execute(
+      'ALTER TABLE trades ADD COLUMN account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL',
+    );
+    await db.execute('''
+      INSERT OR IGNORE INTO trading_accounts
+        (id, name, currency, initial_balance, is_archived, notes, created_at, updated_at)
+      SELECT
+        'legacy-' || lower(hex(randomblob(16))),
+        TRIM(account_label),
+        'UNSPECIFIED',
+        0,
+        0,
+        'Imported automatically from a legacy trade account label',
+        MIN(created_at),
+        MAX(updated_at)
+      FROM trades
+      WHERE account_label IS NOT NULL AND TRIM(account_label) != ''
+      GROUP BY TRIM(account_label) COLLATE NOCASE
+    ''');
+    await db.execute('''
+      UPDATE trades
+      SET account_id = (
+        SELECT id FROM trading_accounts
+        WHERE name = TRIM(trades.account_label) COLLATE NOCASE
+        LIMIT 1
+      )
+      WHERE account_label IS NOT NULL AND TRIM(account_label) != ''
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_trades_account_id_created ON trades(account_id, created_at)',
+    );
   }
 
   Future<void> _createFoundationTables(Database db) async {
