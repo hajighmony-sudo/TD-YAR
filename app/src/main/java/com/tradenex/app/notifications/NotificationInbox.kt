@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 enum class NotifyCategory(val key: String, val label: String) {
-    JOURNAL("journal", "ژورنال"), REMINDER("reminder", "یادآوری"),
+    JOURNAL("journal", "ژورنال"), REMINDER("reminder", "یادآوری"), NEWS("news", "اخبار اقتصادی"),
     STRATEGY("strategy", "استراتژی"), REPORT("report", "گزارش"),
     SESSION("session", "سشن‌ها"), BACKUP("backup", "پشتیبان‌گیری")
 }
