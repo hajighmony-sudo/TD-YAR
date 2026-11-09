@@ -144,6 +144,8 @@ class ReportExportService {
       'filters': {
         'from': from?.toUtc().toIso8601String(),
         'to': to?.toUtc().toIso8601String(),
+        'account_id': accountId,
+        'strategy_id': strategyId,
       },
       'trades': selectedTrades,
       'journal_entries': journals.map((entry) => entry.toMap()).toList(),
