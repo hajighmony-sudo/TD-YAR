@@ -55,3 +55,5 @@ export 'core/domain/services/database_backup_service.dart';
 export 'core/td_yar_services.dart';
 
 export 'core/domain/services/json_archive_import_service.dart';
+
+export 'core/domain/models/performance_candle.dart';
