@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +46,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tradenex.app.ui.components.TxChip
-import com.tradenex.app.ui.components.TxField
 import com.tradenex.app.ui.theme.Palette
 import com.tradenex.app.ui.theme.PanelStyle
 import com.tradenex.app.ui.theme.ThemeController
@@ -81,7 +81,7 @@ fun ThemesGroup() {
         Spacer(Modifier.height(12.dp))
         SmallLabel("تم‌های شخصی")
         Text("ترکیب فعلی رنگ، درخشش و افکت‌ها را با نام دلخواه ذخیره کن. تم پیش‌فرض قابل حذف نیست؛ تم‌های شخصی را هر زمان خواستی می‌توانی پاک کنی.", color = Tx.Muted, fontSize = 10.sp)
-        TxField(presetName, { presetName = it.take(28) }, "نام تم جدید")
+        OutlinedTextField(value = presetName, onValueChange = { presetName = it.take(28) }, label = { Text("نام تم جدید") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         TxChip("ذخیره ترکیب فعلی", false, {
             if (presetName.isBlank()) {
                 presetMessage = "برای تم شخصی یک نام وارد کن."
