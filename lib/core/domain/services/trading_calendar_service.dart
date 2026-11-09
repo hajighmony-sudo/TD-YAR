@@ -26,7 +26,7 @@ class TradingCalendarService {
   Future<List<CalendarDaySummary>> week(DateTime date) {
     final start = DateTime(date.year, date.month, date.day)
         .subtract(Duration(days: date.weekday - DateTime.monday));
-    return range(start, start.add(const Duration(days: 6)));
+    return range(start, DateTime(start.year, start.month, start.day + 6));
   }
 
   Future<List<CalendarDaySummary>> month(int year, int month) =>
@@ -38,7 +38,7 @@ class TradingCalendarService {
     if (end.isBefore(start)) {
       throw ArgumentError('Calendar end date must not precede start date.');
     }
-    final inclusiveEnd = end.add(const Duration(days: 1))
+    final inclusiveEnd = DateTime(end.year, end.month, end.day + 1)
         .subtract(const Duration(microseconds: 1));
     final report = await _analyticsService.buildReport(
       from: start,
