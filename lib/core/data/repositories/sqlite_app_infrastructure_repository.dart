@@ -1,0 +1,17 @@
+import 'package:sqflite/sqflite.dart';
+import '../local/app_database.dart';
+import 'app_infrastructure_repository.dart';
+class SqliteAppInfrastructureRepository implements AppInfrastructureRepository {
+ SqliteAppInfrastructureRepository({AppDatabase? database}):_db=database??AppDatabase.instance;final AppDatabase _db;
+ @override Future<void> saveAccount(TradingAccount a) async=>(await _db.database).insert('trading_accounts',a.toMap(),conflictAlgorithm:ConflictAlgorithm.replace);
+ @override Future<TradingAccount?> getAccount(String id) async {final r=await (await _db.database).query('trading_accounts',where:'id = ?',whereArgs:[id],limit:1);return r.isEmpty?null:TradingAccount.fromMap(r.first);}
+ @override Future<List<TradingAccount>> listAccounts({bool includeArchived=false}) async {final r=await (await _db.database).query('trading_accounts',where:includeArchived?null:'is_archived = 0',orderBy:'name COLLATE NOCASE');return r.map(TradingAccount.fromMap).toList();}
+ @override Future<void> archiveAccount(String id,bool archived,DateTime at) async=>(await _db.database).update('trading_accounts',{'is_archived':archived?1:0,'updated_at':at.toUtc().toIso8601String()},where:'id = ?',whereArgs:[id]);
+ @override Future<void> deleteAccount(String id) async=>(await _db.database).delete('trading_accounts',where:'id = ?',whereArgs:[id]);
+ @override Future<String?> getSetting(String key) async {final r=await (await _db.database).query('app_settings',columns:['value'],where:'key = ?',whereArgs:[key],limit:1);return r.isEmpty?null:r.first['value'] as String;}
+ @override Future<void> setSetting(String key,String value,DateTime at) async {if(key.trim().isEmpty)throw ArgumentError('Setting key is required.');await (await _db.database).insert('app_settings',{'key':key,'value':value,'updated_at':at.toUtc().toIso8601String()},conflictAlgorithm:ConflictAlgorithm.replace);}
+ @override Future<Map<String,String>> getSettings() async {final r=await (await _db.database).query('app_settings');return {for(final row in r)row['key'] as String:row['value'] as String};}
+ @override Future<void> deleteSetting(String key) async=>(await _db.database).delete('app_settings',where:'key = ?',whereArgs:[key]);
+ @override Future<void> appendAuditEvent(AuditLogEntry e) async=>(await _db.database).insert('audit_events',{'id':e.id,'event_type':e.eventType,'entity_type':e.entityType,'entity_id':e.entityId,'details_json':e.detailsJson,'occurred_at':e.occurredAt.toUtc().toIso8601String()});
+ @override Future<List<AuditLogEntry>> getAuditEvents({DateTime? from,DateTime? to,String? entityType,int limit=200}) async {if(limit<1||limit>5000)throw ArgumentError.value(limit,'limit');final w=<String>[];final a=<Object?>[];if(from!=null){w.add('occurred_at >= ?');a.add(from.toUtc().toIso8601String());}if(to!=null){w.add('occurred_at <= ?');a.add(to.toUtc().toIso8601String());}if(entityType!=null){w.add('entity_type = ?');a.add(entityType);}final r=await (await _db.database).query('audit_events',where:w.isEmpty?null:w.join(' AND '),whereArgs:a,orderBy:'occurred_at DESC',limit:limit);return r.map((m)=>AuditLogEntry(id:m['id'] as String,eventType:m['event_type'] as String,entityType:m['entity_type'] as String,entityId:m['entity_id'] as String,detailsJson:m['details_json'] as String,occurredAt:DateTime.parse(m['occurred_at'] as String).toLocal())).toList();}
+}
