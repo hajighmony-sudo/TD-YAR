@@ -17,8 +17,16 @@ class PerformanceAnalyticsService {
     DateTime? from,
     DateTime? to,
     String? symbol,
+    String? accountId,
+    String? strategyId,
+    TradeDirection? direction,
   }) async {
-    final trades = await _tradeRepository.getTrades(symbol: symbol);
+    final trades = await _tradeRepository.getTrades(
+      symbol: symbol,
+      accountId: accountId,
+      strategyId: strategyId,
+      direction: direction,
+    );
     final executions = await Future.wait(
       trades.map((trade) => _tradeRepository.getExecutions(trade.id)),
     );
