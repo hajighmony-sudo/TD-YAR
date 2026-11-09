@@ -120,7 +120,7 @@ class PerformanceAnalytics {
       averageLoss: losses.isEmpty ? 0 : -negative / losses.length,
       profitFactor: negative == 0 ? null : positive / negative,
       expectancy: outcomes.isEmpty ? 0 : net / outcomes.length,
-      maxDrawdown: _maxDrawdown(outcomes),
+      maxDrawdown: _maxDrawdownRealizations(filtered),
       averageDuration: outcomes.isEmpty
           ? Duration.zero
           : Duration(seconds: durationSeconds ~/ outcomes.length),
@@ -148,12 +148,12 @@ class PerformanceAnalytics {
   static double _sum(Iterable<double> values) =>
       values.fold<double>(0, (sum, value) => sum + value);
 
-  static double _maxDrawdown(List<TradeOutcome> outcomes) {
+  static double _maxDrawdownRealizations(List<TradeRealization> values) {
     var equity = 0.0;
     var peak = 0.0;
     var maxDrawdown = 0.0;
-    for (final outcome in outcomes) {
-      equity += outcome.netPnl;
+    for (final value in values) {
+      equity += value.netPnl;
       if (equity > peak) peak = equity;
       final drawdown = peak - equity;
       if (drawdown > maxDrawdown) maxDrawdown = drawdown;
