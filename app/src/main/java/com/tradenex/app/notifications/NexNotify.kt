@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.tradenex.app.MainActivity
+import com.tradenex.app.data.AppState
 import com.tradenex.app.R
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -19,6 +20,7 @@ object NexNotify {
     const val CHANNEL_GENERAL = "nex_general"
     const val CHANNEL_REMINDERS = "nex_reminders"
     const val CHANNEL_REPORTS = "nex_reports"
+    const val CHANNEL_NEWS = "nex_news"
     private val ids = AtomicInteger((System.currentTimeMillis() % 100000).toInt())
 
     fun initialize(context: Context) {
@@ -27,7 +29,8 @@ object NexNotify {
         manager.createNotificationChannels(listOf(
             NotificationChannel(CHANNEL_GENERAL, "اعلان‌های ژورنال", NotificationManager.IMPORTANCE_DEFAULT).apply { description = "ثبت و مرور ژورنال" },
             NotificationChannel(CHANNEL_REMINDERS, "یادآوری‌ها", NotificationManager.IMPORTANCE_DEFAULT).apply { description = "یادآوری‌های قابل تنظیم ژورنال" },
-            NotificationChannel(CHANNEL_REPORTS, "گزارش‌ها", NotificationManager.IMPORTANCE_LOW).apply { description = "گزارش‌های دوره‌ای" }
+            NotificationChannel(CHANNEL_REPORTS, "گزارش‌ها", NotificationManager.IMPORTANCE_LOW).apply { description = "گزارش‌های دوره‌ای" },
+            NotificationChannel(CHANNEL_NEWS, "اخبار اقتصادی", NotificationManager.IMPORTANCE_DEFAULT).apply { description = "یادآوری رویدادهای تقویم اقتصادی" }
         ))
     }
 
@@ -48,7 +51,7 @@ object NexNotify {
             listOf("مشاهده سشن‌ها" to "OPEN"))
 
     fun scheduleNewsReminder(context: Context, eventId: Int, title: String, currency: String, atMillis: Long): Boolean {
-        if (atMillis <= System.currentTimeMillis()) return false
+        if (!AppState.settings.newsAlerts || atMillis <= System.currentTimeMillis()) return false
         val alarmIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = "com.tradenex.app.NEWS_REMINDER"
             putExtra("action", "NEWS_REMINDER")
@@ -87,6 +90,7 @@ object NexNotify {
              actions: List<Pair<String, String>> = emptyList()) {
         val prefs = context.getSharedPreferences("nex_notify_settings", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("enabled_global", true) || !prefs.getBoolean("enabled_${category.key}", true)) return
+        if (category == NotifyCategory.NEWS && !AppState.settings.newsAlerts) return
         val id = ids.incrementAndGet()
         NotificationInbox.add(context, InboxNotification(id, category, title, body, System.currentTimeMillis(), route))
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -95,6 +99,7 @@ object NexNotify {
         val channel = when (category) {
             NotifyCategory.REMINDER -> CHANNEL_REMINDERS
             NotifyCategory.REPORT -> CHANNEL_REPORTS
+            NotifyCategory.NEWS -> CHANNEL_NEWS
             else -> CHANNEL_GENERAL
         }
         val openIntent = Intent(context, MainActivity::class.java).apply {
