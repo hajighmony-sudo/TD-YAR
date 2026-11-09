@@ -131,7 +131,7 @@ fun EducationScreen(nav: NavController) {
                 }
                 busy = false
                 message = r.fold(
-                    { "وارد شد: ${it.lessons} درس، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} مورد ناقص)" else "" },
+                    { "وارد شد: ${it.lessons} درس، ${it.strategies} استراتژی، ${it.revisions} نسخه، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} مورد ناقص)" else "" },
                     { if (it is TxPackage.BadPackage) it.message ?: "فایل نامعتبر" else "ورود ممکن نشد: ${it.message}" },
                 )
             }
@@ -178,7 +178,7 @@ fun EducationScreen(nav: NavController) {
                         categories.forEach { TxChip(it, filter == it, { filter = it }) }
                     }
                     TxChip("★ محبوب‌ها", favoritesOnly, { favoritesOnly = !favoritesOnly })
-                    Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): همه‌ی درس‌ها و فایل‌هایشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. برای رمزنگاری واقعی، رمز عبور الزامی است.", color = Tx.Muted, fontSize = 10.sp)
+                    Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): درس‌ها، استراتژی‌ها، نسخه‌ها و فایل‌های پیوستشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. برای رمزنگاری واقعی، رمز عبور الزامی است.", color = Tx.Muted, fontSize = 10.sp)
                     TxField(txPassword, { txPassword = it }, "رمز مشترک برای .tx و QR (الزامی)")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TxChip(if (busy) "…" else "خروجی .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای رمزنگاری فایل .tx ابتدا رمز تعیین کن." else if (EducationStore.lessons.isNotEmpty() || AppState.strategies.isNotEmpty()) txExport.launch("td-yar-full-content.tx") else message = "درس یا استراتژی‌ای برای خروجی گرفتن نیست." })
