@@ -85,6 +85,9 @@ class AppDatabase {
     ''');
     await _createAdvancedTables(db);
     await _createFoundationTables(db);
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_trades_account_id_created ON trades(account_id, created_at)',
+    );
   }
 
   Future<void> _upgradeSchema(Database db, int oldVersion, int newVersion) async {
