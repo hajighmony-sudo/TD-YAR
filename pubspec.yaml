@@ -23,3 +23,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+# Use the runner's system SQLite for Linux tests to avoid downloading a binary
+# from GitHub releases; mobile builds keep the package-provided SQLite binary.
+hooks:
+  user_defines:
+    sqlite3:
+      source:
+        linux: system
+        default: sqlite3
