@@ -94,9 +94,9 @@ fun AddTradeScreen(nav: NavController) {
     var usePriceCalculation by remember { mutableStateOf(false) }
     var entryText by remember { mutableStateOf("") }
     var exitText by remember { mutableStateOf("") }
-    var conversionText by remember { mutableStateOf(if (symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else "") }
+    var conversionText by remember { mutableStateOf(if (AppState.selectedAccount.baseCurrency.isNotBlank() && symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else "") }
     LaunchedEffect(symbol, AppState.selectedAccountId) {
-        conversionText = if (symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else ""
+        conversionText = if (AppState.selectedAccount.baseCurrency.isNotBlank() && symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else ""
     }
     var commissionText by remember { mutableStateOf("0") }
     var swapText by remember { mutableStateOf("0") }
@@ -148,6 +148,15 @@ fun AddTradeScreen(nav: NavController) {
     val exceedsTradeCount = existingToday.size >= settings.maxTradesPerDay
 
     Page(title = "ثبت معامله", onBack = { nav.popBackStack() }) {
+        if (AppState.accounts.none { !it.archived }) {
+            GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("ابتدا حساب خودت را ثبت کن", color = Tx.Gold, fontWeight = FontWeight.ExtraBold)
+                    Text("تا زمانی که حساب و ارز پایه را وارد نکنی، معامله‌ای با موجودی فرضی ثبت نمی‌شود.", color = Tx.Muted, fontSize = 11.sp)
+                    GoldButton("رفتن به بخش حساب‌ها") { nav.navigate("accounts") }
+                }
+            }
+        }
         Reveal(0) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SideButton("خرید (Buy)", true, buy, Tx.Green, Modifier.weight(1f)) { buy = true }
@@ -238,8 +247,8 @@ fun AddTradeScreen(nav: NavController) {
                 Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (!usePriceCalculation) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ResultToggle("سود (Profit)", win, Tx.Green, Modifier.weight(1f)) { win = true }
-                            ResultToggle("ضرر (Loss)", !win, Tx.Red, Modifier.weight(1f)) { win = false }
+                            ResultToggle("سود (Profit)", resultChosen && win, Tx.Green, Modifier.weight(1f)) { win = true; resultChosen = true }
+                            ResultToggle("ضرر (Loss)", resultChosen && !win, Tx.Red, Modifier.weight(1f)) { win = false; resultChosen = true }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
