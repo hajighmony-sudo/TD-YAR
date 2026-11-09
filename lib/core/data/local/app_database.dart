@@ -137,9 +137,12 @@ class AppDatabase {
     if (oldVersion < 6) await _createFoundationTables(db);
     if (oldVersion < 7) await _upgradeTradeAccounts(db);
     if (oldVersion < 8) {
-      await db.execute(
-        'ALTER TABLE risk_profiles ADD COLUMN account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL',
-      );
+      final riskColumns = await db.rawQuery('PRAGMA table_info(risk_profiles)');
+      if (!riskColumns.any((column) => column['name'] == 'account_id')) {
+        await db.execute(
+          'ALTER TABLE risk_profiles ADD COLUMN account_id TEXT REFERENCES trading_accounts(id) ON DELETE SET NULL',
+        );
+      }
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_risk_profiles_account ON risk_profiles(account_id, updated_at)',
       );
