@@ -99,6 +99,7 @@ fun MoreScreen(nav: NavController) {
     }
     val items = listOf(
         MenuItem("ژورنال معاملات", "تاریخچه، ویرایش و فیلتر", Icons.Rounded.ReceiptLong, "trades", Tx.Green),
+        MenuItem("پوزیشن‌ها", "ورود چندمرحله‌ای و خروج جزئی", Icons.Rounded.SwapHoriz, "positions", Tx.Blue),
         MenuItem("برنامه هفتگی", "هدف‌ها، نظم و گزارش هفتگی", Icons.Rounded.EventNote, "weekly", Tx.Gold),
         MenuItem("حساب‌ها", "دمو، ریل و پراپ", Icons.Rounded.AccountBalance, "accounts", Tx.Blue),
         MenuItem("سشن‌ها", "کره زمین و همپوشانی", Icons.Rounded.Public, "sessions", Tx.Blue),
