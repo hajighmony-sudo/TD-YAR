@@ -1,0 +1,123 @@
+import 'dart:collection';
+
+import '../models/trade.dart';
+import '../models/trade_execution.dart';
+import '../models/trade_metrics.dart';
+
+/// Deterministic bookkeeping calculations for manually recorded executions.
+///
+/// Exits are matched to entry fills in FIFO order. This class does not fetch
+/// prices, estimate unrealized P&L, or produce trading recommendations.
+class TradeCalculator {
+  const TradeCalculator._();
+
+  static const double _epsilon = 1e-10;
+
+  static TradeMetrics calculate({
+    required Trade trade,
+    required List<TradeExecution> executions,
+  }) {
+    if (trade.contractMultiplier <= 0) {
+      throw ArgumentError.value(
+        trade.contractMultiplier,
+        'trade.contractMultiplier',
+        'Must be greater than zero.',
+      );
+    }
+
+    final sorted = [...executions]
+      ..sort((a, b) => a.executedAt.compareTo(b.executedAt));
+
+    final openLots = Queue<_OpenLot>();
+    var totalFees = 0.0;
+    var closedQuantity = 0.0;
+    var grossRealizedPnl = 0.0;
+    var allocatedFees = 0.0;
+    var weightedEntry = 0.0;
+    var weightedExit = 0.0;
+
+    for (final execution in sorted) {
+      if (execution.tradeId != trade.id) {
+        throw ArgumentError('Every execution must belong to the supplied trade.');
+      }
+      if (execution.quantity <= 0 ||
+          execution.price <= 0 ||
+          execution.fee < 0) {
+        throw ArgumentError('Quantity and price must be positive; fee cannot be negative.');
+      }
+
+      totalFees += execution.fee;
+
+      if (execution.kind == ExecutionKind.entry) {
+        openLots.add(
+          _OpenLot(
+            remainingQuantity: execution.quantity,
+            price: execution.price,
+            remainingFee: execution.fee,
+          ),
+        );
+        continue;
+      }
+
+      var remainingExitQuantity = execution.quantity;
+      while (remainingExitQuantity > _epsilon) {
+        if (openLots.isEmpty) {
+          throw StateError('Exit quantity exceeds the open quantity for this trade.');
+        }
+
+        final lot = openLots.first;
+        final matched = remainingExitQuantity < lot.remainingQuantity
+            ? remainingExitQuantity
+            : lot.remainingQuantity;
+        final entryFeePart =
+            lot.remainingFee * (matched / lot.remainingQuantity);
+        final exitFeePart = execution.fee * (matched / execution.quantity);
+        final priceDifference = trade.direction == TradeDirection.long
+            ? execution.price - lot.price
+            : lot.price - execution.price;
+
+        grossRealizedPnl +=
+            priceDifference * matched * trade.contractMultiplier;
+        allocatedFees += entryFeePart + exitFeePart;
+        weightedEntry += lot.price * matched;
+        weightedExit += execution.price * matched;
+        closedQuantity += matched;
+        remainingExitQuantity -= matched;
+        lot.remainingQuantity -= matched;
+        lot.remainingFee -= entryFeePart;
+
+        if (lot.remainingQuantity <= _epsilon) {
+          openLots.removeFirst();
+        }
+      }
+    }
+
+    final openQuantity =
+        openLots.fold<double>(0, (sum, lot) => sum + lot.remainingQuantity);
+
+    return TradeMetrics(
+      closedQuantity: closedQuantity,
+      openQuantity: openQuantity,
+      averageEntryPrice:
+          closedQuantity == 0 ? 0 : weightedEntry / closedQuantity,
+      averageExitPrice:
+          closedQuantity == 0 ? 0 : weightedExit / closedQuantity,
+      grossRealizedPnl: grossRealizedPnl,
+      feesAllocatedToClosedQuantity: allocatedFees,
+      totalFees: totalFees,
+      netRealizedPnl: grossRealizedPnl - allocatedFees,
+    );
+  }
+}
+
+class _OpenLot {
+  _OpenLot({
+    required this.remainingQuantity,
+    required this.price,
+    required this.remainingFee,
+  });
+
+  double remainingQuantity;
+  final double price;
+  double remainingFee;
+}
