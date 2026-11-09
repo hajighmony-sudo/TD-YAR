@@ -13,7 +13,7 @@ class DatabaseBackupService {
       : _db = database ?? AppDatabase.instance;
 
   final AppDatabase _db;
-  static const int _currentSchemaVersion = 7;
+  static const int _currentSchemaVersion = 8;
 
   Future<File> createBackup(String destinationPath) async {
     if (!destinationPath.toLowerCase().endsWith('.db')) {
@@ -117,6 +117,12 @@ class DatabaseBackupService {
       );
       final tables = rows.map((row) => row['name'] as String).toSet();
       final missing = required.where((name) => !tables.contains(name));
+      if (version >= 8) {
+        final riskColumns = await candidate.rawQuery('PRAGMA table_info(risk_profiles)');
+        if (!riskColumns.any((column) => column['name'] == 'account_id')) {
+          throw const FormatException('Schema v8 backup is missing risk_profiles.account_id.');
+        }
+      }
       if (version >= 7) {
         final tradeColumns = await candidate.rawQuery('PRAGMA table_info(trades)');
         if (!tradeColumns.any((column) => column['name'] == 'account_id')) {
