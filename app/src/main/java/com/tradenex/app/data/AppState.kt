@@ -154,7 +154,7 @@ object AppState {
         val snapshot = localStore?.readSnapshot()
         if (snapshot != null) {
             val target = MutableSnapshot(
-                trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
+                trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
                 selectedAccountId, txAiEpisodeReviews, txAiInsightPins,
             )
             SnapshotCodec.restore(snapshot, target)
@@ -165,7 +165,7 @@ object AppState {
 
     fun persist() {
         val payload = SnapshotCodec.encode(
-            trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
+            trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
             txAiEpisodeReviews, txAiInsightPins,
         )
         localStore?.writeSnapshot(payload)
@@ -329,7 +329,7 @@ object AppState {
         val snapshot = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return false
         if (snapshot.optInt("version", 0) != 1) return false
         val target = MutableSnapshot(
-            trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
+            trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
             selectedAccountId, txAiEpisodeReviews, txAiInsightPins,
         )
         SnapshotCodec.restore(snapshot, target)
