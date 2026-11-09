@@ -20,6 +20,7 @@ import 'data/repositories/sqlite_trading_session_repository.dart';
 import 'domain/services/daily_journal_service.dart';
 import 'domain/services/database_backup_service.dart';
 import 'domain/services/learning_library_service.dart';
+import 'domain/services/json_archive_import_service.dart';
 import 'domain/services/performance_analytics_service.dart';
 import 'domain/services/psychology_analytics_service.dart';
 import 'domain/services/report_export_service.dart';
@@ -55,6 +56,7 @@ class TdYarServices {
     required this.learningLibrary,
     required this.reports,
     required this.backups,
+    required this.archiveImporter,
   });
 
   factory TdYarServices({AppDatabase? database}) {
@@ -124,6 +126,7 @@ class TdYarServices {
       learningLibrary: learningLibrary,
       reports: reports,
       backups: DatabaseBackupService(database: db),
+      archiveImporter: JsonArchiveImportService(database: db),
     );
   }
 
@@ -148,4 +151,5 @@ class TdYarServices {
   final LearningLibraryService learningLibrary;
   final ReportExportService reports;
   final DatabaseBackupService backups;
+  final JsonArchiveImportService archiveImporter;
 }
