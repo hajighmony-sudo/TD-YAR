@@ -40,7 +40,7 @@ void main() {
         tradeId: 't2',
       ),
     ];
-    const outcomes = [
+    final outcomes = [
       TradeOutcome(
         tradeId: 't1',
         symbol: 'EURUSD',
