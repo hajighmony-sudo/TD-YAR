@@ -6,9 +6,11 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'td_yar.db';
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   Database? _database;
+
+  Future<String> get databaseFile async => path.join(await getDatabasesPath(), _databaseName);
 
   Future<Database> get database async {
     final existing = _database;
@@ -81,6 +83,7 @@ class AppDatabase {
       )
     ''');
     await _createAdvancedTables(db);
+    await _createFoundationTables(db);
   }
 
   Future<void> _upgradeSchema(Database db, int oldVersion, int newVersion) async {
@@ -124,6 +127,18 @@ class AppDatabase {
       );
       await _createSessionTable(db);
     }
+    if (oldVersion < 6) await _createFoundationTables(db);
+  }
+
+  Future<void> _createFoundationTables(Database db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS learning_resources (id TEXT PRIMARY KEY, title TEXT NOT NULL, type TEXT NOT NULL, body TEXT NOT NULL DEFAULT '', media_path TEXT, caption TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT '', tags_json TEXT NOT NULL DEFAULT '[]', related_strategy_ids_json TEXT NOT NULL DEFAULT '[]', source_url TEXT, is_favorite INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS trading_accounts (id TEXT PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE, currency TEXT NOT NULL, initial_balance REAL NOT NULL DEFAULT 0, is_archived INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
+    await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_accounts_name ON trading_accounts(name COLLATE NOCASE)');
+    await db.execute('CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)');
+    await db.execute('''CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, event_type TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, details_json TEXT NOT NULL DEFAULT \'{}\', occurred_at TEXT NOT NULL)''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_updated ON learning_resources(updated_at)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_learning_category ON learning_resources(category)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_events(occurred_at)');
   }
 
   Future<void> _createAdvancedTables(Database db) async {
