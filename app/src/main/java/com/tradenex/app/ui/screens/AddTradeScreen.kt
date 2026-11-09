@@ -134,6 +134,12 @@ fun AddTradeScreen(nav: NavController) {
     val resColor = if (signed >= 0.0) Tx.Green else Tx.Red
     val riskUsd = AppState.selectedAccount.startingBalance * settings.riskPercent / 100.0
     val overRisk = if (usePriceCalculation) signed < -riskUsd else !win && amount > riskUsd
+    val existingToday = AppState.visibleTrades.filter { it.epochDay == parsedTradeDate?.toEpochDay() }
+    val realizedLossToday = existingToday.sumOf { if (it.pnl < 0.0) -it.pnl else 0.0 }
+    val dailyLossLimitCash = AppState.selectedAccount.startingBalance * settings.dailyLossLimitPercent / 100.0
+    val projectedDailyLoss = realizedLossToday + if (signed < 0.0) -signed else 0.0
+    val exceedsDailyLoss = projectedDailyLoss > dailyLossLimitCash
+    val exceedsTradeCount = existingToday.size >= settings.maxTradesPerDay
 
     Page(title = "ثبت معامله", onBack = { nav.popBackStack() }) {
         Reveal(0) {
@@ -297,6 +303,22 @@ fun AddTradeScreen(nav: NavController) {
             Text(
                 "ضرر از ریسک تعیین‌شده (${settings.riskPercent}٪ بالانس) بیشتر است؛ در دفترچه علامت می‌خورد.",
                 color = Tx.Red,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+        if (exceedsDailyLoss) {
+            Text(
+                "هشدار سقف ضرر روزانه: ضرر ثبت‌شده به‌همراه این نتیجه حدود ${String.format(java.util.Locale.US, "%.2f", projectedDailyLoss)} است؛ سقف تنظیم‌شده ${settings.dailyLossLimitPercent}٪ بالانس است.",
+                color = Tx.Red,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+        if (exceedsTradeCount) {
+            Text(
+                "هشدار تعداد معاملات: امروز ${existingToday.size} معامله ثبت شده و سقف شخصی تو ${settings.maxTradesPerDay} معامله است.",
+                color = Tx.Gold,
                 fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
