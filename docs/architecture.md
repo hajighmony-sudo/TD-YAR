@@ -55,26 +55,29 @@ TD-YAR is a manual-first trading journal and trader reflection companion. Users 
 
 - CSV export lists realized exit records.
 - PDF export summarizes historical performance metrics.
-- Versioned JSON archive export covers trades with complete fill histories, daily journal, strategies, psychology entries, risk profiles and trade-risk records, learning resources, session definitions, accounts, settings, audit events and a performance snapshot.
+- Versioned JSON archive export covers trades with complete fill histories, daily journal, strategies, playbooks, attachment metadata, psychology entries, risk profiles and trade-risk records, learning resources, session definitions, accounts, settings, audit events and a performance snapshot.
 - Optional repository dependencies are reported in the archive manifest so a caller can identify omitted modules.
 - SQLite backup validates database integrity, schema version and required tables. Restore stages a candidate file and keeps a rollback copy until the restored database opens successfully.
-- JSON archive import and cloud synchronization are not included yet. Binary media files are referenced by local path and are not embedded in JSON exports.
+- JSON archive import validates the format and model relationships, then inserts all supported rows in a single SQLite transaction. Duplicate IDs and constraint failures abort the import without overwriting existing data.
+- Binary media files are referenced by local path and are not embedded in JSON exports; paths may not resolve on another device. Cloud synchronization is not included.
 
 ### 11. Core infrastructure
 
 - Manual trading accounts support currency, opening balance, notes and archive lifecycle.
 - Key/value settings provide local app configuration.
-- Append-only audit events store event/entity identifiers, JSON-object details and UTC timestamps.
+- SQLite triggers append audit events atomically for create/update/delete operations across trades, executions, journals, strategies, playbooks, attachments, psychology, risk, sessions, learning, accounts and settings. Audit rows reject update/delete operations.
 - Account names are unique case-insensitively; IDs, names, currencies and balances are validated.
 - These primitives do not imply broker or exchange account connectivity.
 
 ## Persistence and migrations
 
-SQLite schema version **6** includes trades, executions, journal entries, strategies, playbooks, attachments metadata, psychology entries, risk profiles, per-trade risk records, trading sessions, learning resources, manual trading accounts, app settings and audit events.
+SQLite schema version **7** includes trades, executions, journal entries, strategies, playbooks, attachments metadata, psychology entries, risk profiles, per-trade risk records, trading sessions, learning resources, manual trading accounts, app settings and audit events.
 
-Migrations preserve existing trade/journal data and add feature tables/indexes incrementally. Schema creation is centralized in `AppDatabase`.
+Migrations preserve existing trade/journal data and add feature tables/indexes incrementally. Version 7 adds a nullable foreign-key account link to trades, backfills legacy account labels into manual account rows, and adds atomic audit triggers. Schema creation is centralized in `AppDatabase`.
 
 ## Validation
+
+`TdYarServices` is the composition root: construct it once and inject its repositories/services into the presentation layer. All SQLite repositories share the same `AppDatabase` instance.
 
 Run:
 
