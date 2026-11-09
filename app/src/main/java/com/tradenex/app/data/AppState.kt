@@ -321,7 +321,7 @@ object AppState {
     }
 
     fun exportSnapshotJson(): String = SnapshotCodec.encode(
-        trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
+        trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
         txAiEpisodeReviews, txAiInsightPins,
     ).toString(2)
 
