@@ -56,6 +56,13 @@ fun NotificationSettingsScreen() {
                     Switch(checked = categoryStates[category.key] ?: true, enabled = enabled, onCheckedChange = {
                         categoryStates[category.key] = it
                         prefs.edit().putBoolean("enabled_${category.key}", it).apply()
+                        when (category) {
+                            NotifyCategory.NEWS -> AppState.settings = AppState.settings.copy(newsAlerts = it)
+                            NotifyCategory.SESSION -> AppState.settings = AppState.settings.copy(sessionAlerts = it)
+                            NotifyCategory.REMINDER -> AppState.settings = AppState.settings.copy(reminderOn = it)
+                            else -> Unit
+                        }
+                        AppState.persist()
                     })
                 }
             }
