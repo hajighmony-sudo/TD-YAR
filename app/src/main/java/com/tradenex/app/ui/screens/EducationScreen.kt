@@ -254,17 +254,14 @@ fun EducationScreen(nav: NavController) {
                         val file = File(dir, "tradix_lesson_${qrLesson!!.id}.png")
                         file.outputStream().use { qrBitmap!!.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                        val attachments = qrLesson!!.blocks.mapNotNull { it.uri.takeIf(String::isNotBlank)?.let(Uri::parse) }
-                        val streams = arrayListOf(uri).apply { addAll(attachments) }
-                        val send = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                            type = "*/*"
-                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams)
-                            putExtra(Intent.EXTRA_TEXT, "درس TRADIX: ${qrLesson!!.title}\nکد واردسازی: $payload")
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "image/png"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            putExtra(Intent.EXTRA_TEXT, "درس TRADIX: " + qrLesson!!.title + "\nکد واردسازی رمزنگاری‌شده: " + payload + "\nرمز را جداگانه و امن با گیرنده به اشتراک بگذار.")
                             clipData = ClipData.newUri(context.contentResolver, "درس TRADIX", uri)
-                            attachments.forEach { clipData?.addItem(ClipData.Item(it)) }
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری درس TRADIX"))
+                        context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری QR رمزنگاری‌شده"))
                     }.onFailure { message = it.message ?: "اشتراک‌گذاری انجام نشد." }
                 }) { Text("اشتراک‌گذاری QR و فایل‌ها", color = Tx.Gold) }
             },
