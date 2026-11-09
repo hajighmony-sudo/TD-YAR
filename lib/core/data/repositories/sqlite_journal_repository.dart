@@ -23,28 +23,54 @@ class SqliteJournalRepository implements JournalRepository {
     }
   }
 
+  Future<void> _validateTradeLinks(
+    DatabaseExecutor executor,
+    JournalEntry entry,
+  ) async {
+    for (final tradeId in entry.linkedTradeIds.toSet()) {
+      final rows = await executor.query(
+        'trades',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [tradeId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw StateError('Journal references missing trade: $tradeId');
+      }
+    }
+  }
+
   @override
   Future<void> createEntry(JournalEntry entry) async {
     _validate(entry);
-    await (await _db).insert(
-      'journal_entries',
-      entry.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    final db = await _db;
+    await db.transaction((txn) async {
+      await _validateTradeLinks(txn, entry);
+      await txn.insert(
+        'journal_entries',
+        entry.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    });
   }
 
   @override
   Future<void> updateEntry(JournalEntry entry) async {
     _validate(entry);
-    final changed = await (await _db).update(
-      'journal_entries',
-      entry.toMap(),
-      where: 'id = ?',
-      whereArgs: [entry.id],
-    );
-    if (changed == 0) {
-      throw StateError('Journal entry not found: ${entry.id}');
-    }
+    final db = await _db;
+    await db.transaction((txn) async {
+      await _validateTradeLinks(txn, entry);
+      final changed = await txn.update(
+        'journal_entries',
+        entry.toMap(),
+        where: 'id = ?',
+        whereArgs: [entry.id],
+      );
+      if (changed == 0) {
+        throw StateError('Journal entry not found: ${entry.id}');
+      }
+    });
   }
 
   @override
