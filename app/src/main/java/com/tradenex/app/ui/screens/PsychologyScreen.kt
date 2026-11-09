@@ -57,7 +57,7 @@ fun PsychologyScreen(nav: NavController) {
                     PsychologySlider("اعتمادبه‌نفس", confidence, { confidence = it })
                     PsychologySlider("تمرکز", focus, { focus = it })
                     PsychologySlider("فشار و استرس", stress, { stress = it })
-                    PsychologySlider("میل به ورود از ترس置 جا ماندن (FOMO)", fomo, { fomo = it })
+                    PsychologySlider("میل به ورود از جا ماندن (FOMO)", fomo, { fomo = it })
                     PsychologySlider("میل به جبران عجولانه ضرر", revenge, { revenge = it })
                     PsychologySlider("پایبندی به قوانین شخصی", discipline, { discipline = it })
                     Text("یادداشت ذهنی و اتفاقات مهم امروز", color = Tx.Muted, fontSize = 11.sp)
