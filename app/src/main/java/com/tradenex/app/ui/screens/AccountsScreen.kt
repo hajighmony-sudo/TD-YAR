@@ -64,7 +64,12 @@ fun AccountsScreen(nav: NavController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("بالانس اولیه", color = Tx.Muted, fontSize = 10.sp)
-                            Text("${account.baseCurrency} " + String.format(Locale.US, "%,.2f", account.startingBalance), color = Tx.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                if (AppState.settings.hideBalance) "••••" else "${account.baseCurrency} " + String.format(Locale.US, "%,.2f", account.startingBalance),
+                                color = Tx.Text,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         if (!selected) {
                             TextButton(onClick = {
