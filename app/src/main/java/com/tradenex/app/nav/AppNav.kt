@@ -61,6 +61,7 @@ fun AppNav(startDestination: String = "home") {
                     composable("home") { HomeScreen(nav) }
                     composable("accounts") { AccountsScreen(nav) }
                     composable("trades") { TradesScreen(nav) }
+                    composable("positions") { PositionsScreen(nav) }
                     composable("weekly") { WeeklyPlanScreen(nav) }
                     composable("weekly_reminder") { WeeklyPlanScreen(nav, openToday = true) }
                     composable("perf") { PerformanceScreen(nav) }
