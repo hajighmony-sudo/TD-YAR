@@ -328,6 +328,17 @@ object TxPackage {
         }
 
         val source = manifest ?: throw BadPackage("محتوای بسته خوانده نشد")
+        val strategyRows = source.optJSONArray("strategies") ?: JSONArray()
+        val strategyIdMap = HashMap<Long, Long>()
+        val usedStrategyIds = AppState.strategies.map { it.id }.toMutableSet()
+        for (i in 0 until strategyRows.length()) {
+            val row = strategyRows.optJSONObject(i) ?: continue
+            val oldId = row.optLong("id")
+            if (row.optString("name").isBlank()) continue
+            val newId = if (oldId > 0L && oldId !in usedStrategyIds) oldId else System.nanoTime() + i
+            strategyIdMap[oldId] = newId
+            usedStrategyIds.add(newId)
+        }
         val lessonRows = source.optJSONArray("lessons") ?: JSONArray()
         var lessonCount = 0
         var skipped = 0
@@ -340,6 +351,7 @@ object TxPackage {
                 val type = runCatching { EducationBlockType.valueOf(block.optString("type")) }
                     .getOrDefault(EducationBlockType.TEXT)
                 if (entry.isNotEmpty() && entry !in saved) { skipped++; return@mapNotNull null }
+                if (type != EducationBlockType.TEXT && entry.isBlank()) { skipped++; return@mapNotNull null }
                 EducationBlock(
                     id = System.nanoTime() + index,
                     type = type,
@@ -349,18 +361,29 @@ object TxPackage {
                     displayName = block.optString("displayName"),
                 )
             }
-            EducationStore.importTextLesson(row.optString("title"), blocks)
+            val tags = row.optJSONArray("tags") ?: JSONArray()
+            val oldLinkedId = row.optLong("linkedStrategyId").takeIf { row.has("linkedStrategyId") && it > 0L }
+            EducationStore.importLesson(
+                EducationLesson(
+                    id = System.nanoTime() + i,
+                    title = row.optString("title"),
+                    createdAt = row.optLong("createdAt", System.currentTimeMillis()),
+                    blocks = blocks,
+                    progress = row.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f),
+                    category = row.optString("category", "عمومی"),
+                    tags = (0 until tags.length()).mapNotNull { tags.optString(it).takeIf(String::isNotBlank) },
+                    favorite = row.optBoolean("favorite", false),
+                    linkedStrategyId = oldLinkedId?.let { strategyIdMap[it] ?: it },
+                ),
+            )
             lessonCount++
         }
 
-        val strategyRows = source.optJSONArray("strategies") ?: JSONArray()
-        val strategyIdMap = HashMap<Long, Long>()
         var strategyCount = 0
         for (i in 0 until strategyRows.length()) {
             val row = strategyRows.optJSONObject(i) ?: continue
             val oldId = row.optLong("id")
-            val newId = System.nanoTime() + i
-            strategyIdMap[oldId] = newId
+            val newId = strategyIdMap[oldId] ?: continue
             val rules = row.optJSONArray("rules") ?: JSONArray()
             val attachmentRows = row.optJSONArray("attachments") ?: JSONArray()
             val attachments = (0 until attachmentRows.length()).mapNotNull { index ->
