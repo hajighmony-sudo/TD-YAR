@@ -4,6 +4,7 @@ import 'trade.dart';
 class TradeRealization {
   const TradeRealization({
     required this.tradeId,
+    required this.executionId,
     required this.symbol,
     required this.direction,
     required this.strategyId,
@@ -16,6 +17,7 @@ class TradeRealization {
   });
 
   final String tradeId;
+  final String executionId;
   final String symbol;
   final TradeDirection direction;
   final String? strategyId;
