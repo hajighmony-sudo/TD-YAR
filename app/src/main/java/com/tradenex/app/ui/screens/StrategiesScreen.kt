@@ -59,6 +59,7 @@ fun StrategiesScreen(nav: NavController) {
     var ruleInput by remember { mutableStateOf("") }
     val rules = remember { mutableStateListOf<String>() }
     var editingStrategy by remember { mutableStateOf<Strategy?>(null) }
+    var deletingStrategy by remember { mutableStateOf<Strategy?>(null) }
     var editName by remember { mutableStateOf("") }
     var editRules by remember { mutableStateOf("") }
     val n = AppState.visibleTrades.size
@@ -95,7 +96,7 @@ fun StrategiesScreen(nav: NavController) {
                     editingStrategy = s
                     editName = s.name
                     editRules = s.rules.joinToString("\n")
-                })
+                }, onDelete = { deletingStrategy = s })
             }
         }
 
@@ -177,10 +178,26 @@ fun StrategiesScreen(nav: NavController) {
             },
         )
     }
+
+    deletingStrategy?.let { selected ->
+        AlertDialog(
+            onDismissRequest = { deletingStrategy = null },
+            containerColor = Tx.Dialog,
+            title = { Text("حذف استراتژی؟", color = Tx.Text) },
+            text = { Text("استراتژی «${selected.name}» حذف شود؟ سوابق معاملات قبلی دست‌نخورده می‌مانند.", color = Tx.Muted) },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppState.deleteStrategy(selected.id)
+                    deletingStrategy = null
+                }) { Text("حذف استراتژی", color = Tx.Red) }
+            },
+            dismissButton = { TextButton(onClick = { deletingStrategy = null }) { Text("انصراف", color = Tx.Muted) } },
+        )
+    }
 }
 
 @Composable
-private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit) {
+private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDelete: () -> Unit) {
     val visible = AppState.visibleTrades
     val mine = remember(s.name, visible) { visible.filter { it.strategy == s.name }.sortedWith(compareBy({ it.epochDay }, { it.id })) }
     val net = mine.sumOf { it.pnl }
@@ -216,7 +233,7 @@ private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit) {
                     Icons.Rounded.Delete,
                     "حذف استراتژی",
                     tint = Tx.Muted,
-                    modifier = Modifier.size(22.dp).clickable { AppState.deleteStrategy(s.id) },
+                    modifier = Modifier.size(22.dp).clickable(onClick = onDelete),
                 )
             }
         }
