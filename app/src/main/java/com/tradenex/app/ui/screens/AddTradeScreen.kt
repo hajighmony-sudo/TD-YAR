@@ -253,19 +253,23 @@ fun AddTradeScreen(nav: NavController) {
                     }
                     Spacer(Modifier.height(8.dp))
                     if (!usePriceCalculation) {
+                        TxField(amountText, { value ->
+                            amountText = value
+                            amount = value.trim().replace(",", ".").toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+                        }, "مبلغ سود یا ضرر را تایپ کن")
                         Stepper(
                             valueText = AppState.selectedAccount.baseCurrency + " " + String.format(java.util.Locale.US, "%,.2f", amount),
-                            onMinus = { amount = (amount - 10).coerceAtLeast(0.0) },
-                            onPlus = { amount += 10 },
+                            onMinus = { amount = (amount - 10).coerceAtLeast(0.0); amountText = if (amount == 0.0) "" else String.format(java.util.Locale.US, "%.2f", amount) },
+                            onPlus = { amount += 10; amountText = String.format(java.util.Locale.US, "%.2f", amount) },
                             valueColor = resColor,
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             amountPresets.forEach { p ->
-                                TxChip("+${p.toInt()}", false, { amount += p })
+                                TxChip("+${p.toInt()}", false, { amount += p; amountText = String.format(java.util.Locale.US, "%.2f", amount) })
                             }
                         }
-                        Text("تغییر مبلغ دستی: هر بار ۱۰ واحد", color = Tx.Muted, fontSize = 10.sp)
+                        Text("مبلغ را می‌توانی مستقیم تایپ کنی یا با کنترل‌ها تغییر بدهی.", color = Tx.Muted, fontSize = 10.sp)
                     }
                 }
             }
