@@ -1,6 +1,7 @@
 import '../models/performance_report.dart';
 import '../models/trade.dart';
 import '../models/trade_execution.dart';
+import '../models/trade_realization.dart';
 import 'trade_calculator.dart';
 
 class PerformanceAnalytics {
@@ -12,38 +13,83 @@ class PerformanceAnalytics {
     DateTime? from,
     DateTime? to,
   }) {
+    if (from != null && to != null && to.isBefore(from)) {
+      throw ArgumentError('Report end must not precede report start.');
+    }
+
+    final allRealizations = <TradeRealization>[];
     final outcomes = <TradeOutcome>[];
+
     for (final trade in trades) {
       final executions = executionsByTrade[trade.id] ?? const <TradeExecution>[];
       if (executions.isEmpty) continue;
-      final metrics = TradeCalculator.calculate(
-        trade: trade, executions: executions,
-      );
-      if (metrics.closedQuantity <= 0) continue;
-      final exits = executions
-          .where((item) => item.kind == ExecutionKind.exit)
-          .toList()
-        ..sort((a, b) => a.executedAt.compareTo(b.executedAt));
-      if (exits.isEmpty) continue;
-      final closedAt = exits.last.executedAt;
-      if (from != null && closedAt.isBefore(from)) continue;
-      if (to != null && closedAt.isAfter(to)) continue;
-      final entries = executions
-          .where((item) => item.kind == ExecutionKind.entry)
-          .toList()
-        ..sort((a, b) => a.executedAt.compareTo(b.executedAt));
-      final openedAt = entries.isEmpty ? closedAt : entries.first.executedAt;
+
+      // Validate the full execution history, including any exits outside range.
+      TradeCalculator.calculate(trade: trade, executions: executions);
+      final ordered = [...executions]..sort(_compareExecutions);
+      final entries = ordered.where((e) => e.kind == ExecutionKind.entry).toList();
+      if (entries.isEmpty) continue;
+      final openedAt = entries.first.executedAt;
+
+      var previousGross = 0.0;
+      var previousFees = 0.0;
+      var previousClosedQuantity = 0.0;
+      final prefix = <TradeExecution>[];
+
+      for (final execution in ordered) {
+        prefix.add(execution);
+        if (execution.kind != ExecutionKind.exit) continue;
+        final cumulative = TradeCalculator.calculate(
+          trade: trade,
+          executions: prefix,
+        );
+        final gross = cumulative.grossRealizedPnl - previousGross;
+        final fees =
+            cumulative.feesAllocatedToClosedQuantity - previousFees;
+        final quantity = cumulative.closedQuantity - previousClosedQuantity;
+        final realization = TradeRealization(
+          tradeId: trade.id,
+          symbol: trade.symbol,
+          direction: trade.direction,
+          strategyId: trade.strategyId,
+          closedAt: execution.executedAt,
+          netPnl: gross - fees,
+          grossPnl: gross,
+          fees: fees,
+          closedQuantity: quantity,
+          duration: execution.executedAt.difference(openedAt),
+        );
+        allRealizations.add(realization);
+        previousGross = cumulative.grossRealizedPnl;
+        previousFees = cumulative.feesAllocatedToClosedQuantity;
+        previousClosedQuantity = cumulative.closedQuantity;
+      }
+    }
+
+    allRealizations.sort((a, b) => a.closedAt.compareTo(b.closedAt));
+    final filtered = allRealizations.where((item) {
+      if (from != null && item.closedAt.isBefore(from)) return false;
+      if (to != null && item.closedAt.isAfter(to)) return false;
+      return true;
+    }).toList(growable: false);
+
+    final grouped = <String, List<TradeRealization>>{};
+    for (final realization in filtered) {
+      grouped.putIfAbsent(realization.tradeId, () => []).add(realization);
+    }
+    for (final group in grouped.values) {
+      final last = group.last;
       outcomes.add(TradeOutcome(
-        tradeId: trade.id,
-        symbol: trade.symbol,
-        direction: trade.direction,
-        strategyId: trade.strategyId,
-        closedAt: closedAt,
-        netPnl: metrics.netRealizedPnl,
-        grossPnl: metrics.grossRealizedPnl,
-        fees: metrics.feesAllocatedToClosedQuantity,
-        closedQuantity: metrics.closedQuantity,
-        duration: closedAt.difference(openedAt),
+        tradeId: last.tradeId,
+        symbol: last.symbol,
+        direction: last.direction,
+        strategyId: last.strategyId,
+        closedAt: last.closedAt,
+        netPnl: _sum(group.map((item) => item.netPnl)),
+        grossPnl: _sum(group.map((item) => item.grossPnl)),
+        fees: _sum(group.map((item) => item.fees)),
+        closedQuantity: _sum(group.map((item) => item.closedQuantity)),
+        duration: last.duration,
       ));
     }
     outcomes.sort((a, b) => a.closedAt.compareTo(b.closedAt));
@@ -61,6 +107,7 @@ class PerformanceAnalytics {
 
     return PerformanceReport(
       outcomes: List.unmodifiable(outcomes),
+      realizations: List.unmodifiable(filtered),
       totalTrades: outcomes.length,
       wins: wins.length,
       losses: losses.length,
@@ -87,6 +134,15 @@ class PerformanceAnalytics {
         (item) => '${item.closedAt.hour.toString().padLeft(2, '0')}:00',
       ),
     );
+  }
+
+  static int _compareExecutions(TradeExecution a, TradeExecution b) {
+    final byTime = a.executedAt.compareTo(b.executedAt);
+    if (byTime != 0) return byTime;
+    if (a.kind != b.kind) {
+      return a.kind == ExecutionKind.entry ? -1 : 1;
+    }
+    return a.id.compareTo(b.id);
   }
 
   static double _sum(Iterable<double> values) =>
