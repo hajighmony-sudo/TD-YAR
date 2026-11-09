@@ -22,7 +22,7 @@ class TradingSessions {
     definition.validate();
     try {
       tz.getLocation(definition.timezoneId);
-    } on Exception {
+    } on Object {
       throw ArgumentError('Unknown IANA timezone: ${definition.timezoneId}');
     }
   }
