@@ -28,6 +28,17 @@ void main() {
       );
     });
 
+    test('image-only resources cannot also contain body text', () async {
+      await expectLater(
+        service.save(_resource(
+          type: LearningContentType.image,
+          body: 'This belongs in a mixed resource',
+          mediaPath: '/local/image.png',
+        )),
+        throwsArgumentError,
+      );
+    });
+
     test('requires both text and media for mixed resources', () async {
       await expectLater(
         service.save(_resource(type: LearningContentType.mixed)),
