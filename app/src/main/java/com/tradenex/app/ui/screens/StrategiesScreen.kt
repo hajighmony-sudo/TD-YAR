@@ -51,6 +51,7 @@ import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.GoldButton
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
+import com.tradenex.app.ui.components.TxChip
 import com.tradenex.app.ui.theme.Tx
 
 @Composable
