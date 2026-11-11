@@ -78,7 +78,7 @@ fun NotificationCenterScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
             if (filtered.isEmpty()) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Outlined.Notifications, null, modifier = Modifier.size(42.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Outlined.Notifications, null, modifier = Modifier.size(42.dp), tint = Tx.Muted)
                         Text("فعلاً اعلانی وجود ندارد", modifier = Modifier.padding(top = 12.dp), color = Tx.Text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         Text("اعلان‌های ژورنال و یادآوری‌ها اینجا نمایش داده می‌شوند.", color = Tx.Muted, fontSize = 11.sp)
                     }
