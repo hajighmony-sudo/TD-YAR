@@ -54,6 +54,39 @@ fun RiskLabScreen(nav: NavController) {
     val horizons = listOf(50, 100, 250)
 
     Page(title = "آزمایشگاه ریسک", onBack = { nav.popBackStack() }) {
+        val todayTrades = trades.filter { it.epochDay == AppState.today() }
+        val todayNet = todayTrades.sumOf { it.pnl }
+        val dailyLoss = todayTrades.filter { it.pnl < 0.0 }.sumOf { -it.pnl }
+        val dailyLossLimit = start.coerceAtLeast(1.0) * AppState.settings.dailyLossLimitPercent / 100.0
+        val lossUsed = (dailyLoss / dailyLossLimit.coerceAtLeast(1e-9)).coerceIn(0.0, 1.0)
+        Reveal(0) {
+            GlassCard(Modifier.fillMaxWidth(), border = if (dailyLoss >= dailyLossLimit || todayTrades.size >= AppState.settings.maxTradesPerDay) Tx.Red.copy(alpha = 0.55f) else Tx.Gold.copy(alpha = 0.35f)) {
+                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SectionTitle("کنترل انضباط امروز", "فقط هشدار اطلاعاتی")
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("معاملات امروز", color = Tx.Muted, fontSize = 10.sp)
+                        Text("${todayTrades.size} / ${AppState.settings.maxTradesPerDay}", color = if (todayTrades.size >= AppState.settings.maxTradesPerDay) Tx.Red else Tx.Text, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("خالص امروز", color = Tx.Muted, fontSize = 10.sp)
+                        Text(String.format(Locale.US, "%+.2f", todayNet), color = if (todayNet >= 0) Tx.Green else Tx.Red, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("زیان‌های ثبت‌شده / سقف روزانه", color = Tx.Muted, fontSize = 10.sp)
+                        Text(String.format(Locale.US, "%.1f%% / %.1f%%", lossUsed * 100, AppState.settings.dailyLossLimitPercent), color = if (dailyLoss >= dailyLossLimit) Tx.Red else Tx.Gold, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                    Text(
+                        when {
+                            dailyLoss >= dailyLossLimit -> "سقف زیان روزانه ثبت‌شده پر شده است؛ این فقط یادآوری است و هیچ معامله‌ای را اجرا یا مسدود نمی‌کند."
+                            todayTrades.size >= AppState.settings.maxTradesPerDay -> "به سقف تعداد معاملات روزانه رسیده‌ای؛ برای بازبینی برنامه مکث کن."
+                            else -> "وضعیت در محدوده تنظیم‌شده است. این بخش صرفاً برای پایش ژورنال است."
+                        },
+                        color = Tx.Muted,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
+        }
         if (pnls.size < 5) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Text("برای محاسبه‌ی آمار ریسک حداقل ۵ معامله در «${account.name}» لازم است. (${persianDigits(pnls.size)} معامله ثبت شده)", color = Tx.Muted, fontSize = 12.sp, modifier = Modifier.padding(16.dp))

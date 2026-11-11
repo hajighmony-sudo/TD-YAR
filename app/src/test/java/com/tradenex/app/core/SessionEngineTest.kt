@@ -34,4 +34,15 @@ class SessionEngineTest {
         assertTrue(state.open)
         assertEquals(0, state.localStart)
     }
+    @Test
+    fun saturdaySessionsAreClosedAndNextBoundarySkipsToMonday() {
+        val saturday = SessionEngine.statesAt(
+            Instant.parse("2026-07-18T10:00:00Z"),
+            ZoneOffset.UTC,
+        ).first { it.def.name == "London" }
+
+        assertTrue(!saturday.open)
+        assertEquals(Instant.parse("2026-07-20T07:00:00Z"), saturday.nextChange.toInstant())
+    }
+
 }

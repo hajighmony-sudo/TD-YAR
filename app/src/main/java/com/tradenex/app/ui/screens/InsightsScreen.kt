@@ -36,7 +36,7 @@ private fun fmt(v: Double) = if (v.isInfinite()) "∞" else "%.2f".format(v)
 fun InsightsScreen(nav: NavController) {
     val trades = AppState.visibleTrades
     var tab by remember { mutableStateOf(0) }
-    val tabs = listOf("نماد", "روز هفته", "ساعت", "استراتژی", "احساس", "هشتگ", "جهت")
+    val tabs = listOf("نماد", "روز هفته", "ساعت", "استراتژی", "احساس", "هشتگ", "جهت", "ماه")
     val groups = when (tab) {
         0 -> Insights.bySymbol(trades)
         1 -> Insights.byWeekday(trades)
@@ -44,7 +44,8 @@ fun InsightsScreen(nav: NavController) {
         3 -> Insights.byStrategy(trades)
         4 -> Insights.byEmotion(trades)
         5 -> Insights.byTag(trades)
-        else -> Insights.bySide(trades)
+        6 -> Insights.bySide(trades)
+        else -> Insights.byMonth(trades)
     }
     val h = Insights.headline(trades)
     val s = Insights.streaks(trades)

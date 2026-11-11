@@ -68,8 +68,36 @@ internal class LocalStore(context: Context) :
 }
 
 internal object SnapshotCodec {
+    private fun encodeStrategyAttachments(items: List<StrategyAttachment>): JSONArray = JSONArray().apply {
+        items.forEach { attachment ->
+            put(JSONObject().apply {
+                put("id", attachment.id)
+                put("uri", attachment.uri)
+                put("mimeType", attachment.mimeType)
+                put("displayName", attachment.displayName)
+                put("sizeBytes", attachment.sizeBytes)
+            })
+        }
+    }
+
+    private fun decodeStrategyAttachments(row: JSONObject): List<StrategyAttachment> {
+        val items = row.optJSONArray("attachments") ?: JSONArray()
+        return (0 until items.length()).mapNotNull { index ->
+            val item = items.optJSONObject(index) ?: return@mapNotNull null
+            val uri = item.optString("uri")
+            if (uri.isBlank()) return@mapNotNull null
+            StrategyAttachment(
+                id = item.optLong("id", System.currentTimeMillis() + index),
+                uri = uri,
+                mimeType = item.optString("mimeType", "*/*"),
+                displayName = item.optString("displayName", "فایل پیوست"),
+                sizeBytes = item.optLong("sizeBytes", 0L).coerceAtLeast(0L),
+            )
+        }
+    }
     fun encode(
         trades: List<Trade>,
+        positions: List<JournalPosition>,
         accounts: List<TradingAccount>,
         strategies: List<Strategy>,
         strategyRevisions: List<StrategyRevision>,
@@ -127,11 +155,37 @@ internal object SnapshotCodec {
                 })
             }
         })
+        put("positions", JSONArray().apply {
+            positions.forEach { position ->
+                put(JSONObject().apply {
+                    put("id", position.id); put("accountId", position.accountId)
+                    put("symbol", position.symbol); put("buy", position.buy)
+                    put("strategy", position.strategy); put("notes", position.notes)
+                    put("openedAtMillis", position.openedAtMillis)
+                    put("entryFills", JSONArray().apply {
+                        position.entryFills.forEach { fill ->
+                            put(JSONObject().apply {
+                                put("id", fill.id); put("volume", fill.volume); put("price", fill.price); put("atMillis", fill.atMillis)
+                            })
+                        }
+                    })
+                    put("exitFills", JSONArray().apply {
+                        position.exitFills.forEach { fill ->
+                            put(JSONObject().apply {
+                                put("id", fill.id); put("volume", fill.volume); put("price", fill.price)
+                                put("realizedPnl", fill.realizedPnl); put("atMillis", fill.atMillis)
+                            })
+                        }
+                    })
+                })
+            }
+        })
         put("strategies", JSONArray().apply {
             strategies.forEach { s ->
                 put(JSONObject().apply {
                     put("id", s.id); put("name", s.name); put("rules", JSONArray(s.rules))
                     put("active", s.active); put("version", s.version)
+                    put("attachments", encodeStrategyAttachments(s.attachments))
                 })
             }
         })
@@ -140,6 +194,7 @@ internal object SnapshotCodec {
                 put(JSONObject().apply {
                     put("id", v.id); put("strategyId", v.strategyId); put("version", v.version)
                     put("name", v.name); put("rules", JSONArray(v.rules)); put("createdAt", v.createdAt)
+                    put("attachments", encodeStrategyAttachments(v.attachments))
                 })
             }
         })
@@ -157,7 +212,8 @@ internal object SnapshotCodec {
             put("tzMode", settings.tzMode); put("reminderOn", settings.reminderOn)
             put("reminderHour", settings.reminderHour); put("newsImpact", settings.newsImpact)
             put("startBalance", settings.startBalance); put("defaultLot", settings.defaultLot)
-            put("riskPercent", settings.riskPercent); put("haptics", settings.haptics)
+            put("riskPercent", settings.riskPercent); put("dailyLossLimitPercent", settings.dailyLossLimitPercent)
+            put("maxTradesPerDay", settings.maxTradesPerDay); put("haptics", settings.haptics)
             put("animations", settings.animations); put("accent", settings.accent)
             put("weekendHoliday", settings.weekendHoliday); put("sessionAlerts", settings.sessionAlerts)
             put("newsAlerts", settings.newsAlerts); put("autoBackup", settings.autoBackup)
@@ -179,22 +235,19 @@ internal object SnapshotCodec {
                     id = row.optString("id"),
                     name = row.optString("name"),
                     broker = row.optString("broker"),
-                    type = row.optString("type", "REAL"),
-                    baseCurrency = row.optString("baseCurrency", "USD"),
-                    startingBalance = row.optDouble("startingBalance", 10000.0),
+                    type = row.optString("type", ""),
+                    baseCurrency = row.optString("baseCurrency", ""),
+                    startingBalance = row.optDouble("startingBalance", 0.0),
                     archived = row.optBoolean("archived", false),
                 ),
             )
         }
-        if (target.accounts.isEmpty()) {
-            target.accounts.add(TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10000.0))
-        }
-        if (target.accounts.none { !it.archived }) {
+        if (target.accounts.isNotEmpty() && target.accounts.none { !it.archived }) {
             target.accounts[0] = target.accounts[0].copy(archived = false)
         }
-        val requestedAccount = snapshot.optString("selectedAccountId", target.accounts.first().id)
+        val requestedAccount = snapshot.optString("selectedAccountId", "")
         target.selectedAccountId = target.accounts.firstOrNull { it.id == requestedAccount && !it.archived }?.id
-            ?: target.accounts.first { !it.archived }.id
+            ?: target.accounts.firstOrNull { !it.archived }?.id.orEmpty()
         target.txAiEpisodeReviews.clear()
         val reviewRows = snapshot.optJSONArray("txAiEpisodeReviews") ?: JSONArray()
         for (i in 0 until reviewRows.length()) {
@@ -226,15 +279,15 @@ internal object SnapshotCodec {
             target.trades.add(
                 Trade(
                     id = row.optLong("id"),
-                    symbol = row.optString("symbol", "EURUSD"),
+                    symbol = row.optString("symbol", ""),
                     buy = row.optBoolean("buy", true),
-                    lot = row.optDouble("lot", 0.1),
+                    lot = row.optDouble("lot", 0.0),
                     pnl = row.optDouble("pnl", 0.0),
                     strategy = row.optString("strategy", ""),
                     tags = (0 until tags.length()).mapNotNull { tags.optString(it).takeIf(String::isNotBlank) },
                     epochDay = row.optLong("epochDay"),
                     emotion = row.optString("emotion", ""),
-                    accountId = row.optString("accountId", "default"),
+                    accountId = row.optString("accountId", ""),
                     openedAtMillis = row.optLong("openedAtMillis", 0L),
                     closedAtMillis = row.optLong("closedAtMillis", 0L),
                     entryPrice = row.optDouble("entryPrice").takeIf { row.has("entryPrice") },
@@ -254,6 +307,56 @@ internal object SnapshotCodec {
                 ),
             )
         }
+        target.positions.clear()
+        val positionRows = snapshot.optJSONArray("positions") ?: JSONArray()
+        for (i in 0 until positionRows.length()) {
+            val row = positionRows.optJSONObject(i) ?: continue
+            fun readFills(key: String, exits: Boolean): List<PositionFill> {
+                val rows = row.optJSONArray(key) ?: JSONArray()
+                return (0 until rows.length()).mapNotNull { index ->
+                    val fill = rows.optJSONObject(index) ?: return@mapNotNull null
+                    val volume = fill.optDouble("volume", 0.0)
+                    val price = fill.optDouble("price", 0.0)
+                    if (!volume.isFinite() || volume <= 0.0 || !price.isFinite() || price <= 0.0) return@mapNotNull null
+                    PositionFill(
+                        id = fill.optLong("id", System.currentTimeMillis() + index),
+                        volume = volume,
+                        price = price,
+                        realizedPnl = if (exits) fill.optDouble("realizedPnl", 0.0) else 0.0,
+                        atMillis = fill.optLong("atMillis", 0L),
+                    )
+                }
+            }
+            val entries = readFills("entryFills", false)
+            val exits = readFills("exitFills", true)
+            if (entries.isNotEmpty() && exits.sumOf { it.volume } <= entries.sumOf { it.volume } + 1e-8) {
+                target.positions.add(
+                    JournalPosition(
+                        id = row.optLong("id"),
+                        accountId = row.optString("accountId", ""),
+                        symbol = row.optString("symbol", ""),
+                        buy = row.optBoolean("buy", true),
+                        strategy = row.optString("strategy", ""),
+                        entryFills = entries,
+                        exitFills = exits,
+                        notes = row.optString("notes", ""),
+                        openedAtMillis = row.optLong("openedAtMillis", 0L),
+                    ),
+                )
+            }
+        }
+        val untouchedSyntheticAccount = target.accounts.singleOrNull {
+            it.id == "default" && it.name == "حساب اصلی" && it.broker.isBlank() &&
+                it.type == "REAL" && it.baseCurrency == "USD" && it.startingBalance == 10_000.0
+        }
+        if (
+            untouchedSyntheticAccount != null &&
+            target.trades.none { it.accountId == untouchedSyntheticAccount.id } &&
+            target.positions.none { it.accountId == untouchedSyntheticAccount.id }
+        ) {
+            target.accounts.remove(untouchedSyntheticAccount)
+            if (target.selectedAccountId == untouchedSyntheticAccount.id) target.selectedAccountId = ""
+        }
         target.strategies.clear()
         val strategyRows = snapshot.optJSONArray("strategies") ?: JSONArray()
         for (i in 0 until strategyRows.length()) {
@@ -265,6 +368,7 @@ internal object SnapshotCodec {
                     (0 until rules.length()).mapNotNull { rules.optString(it).takeIf(String::isNotBlank) },
                     row.optBoolean("active", true),
                     row.optInt("version", 1),
+                    decodeStrategyAttachments(row),
                 ),
             )
         }
@@ -281,6 +385,7 @@ internal object SnapshotCodec {
                     name = row.optString("name"),
                     rules = (0 until rules.length()).mapNotNull { rules.optString(it).takeIf(String::isNotBlank) },
                     createdAt = row.optLong("createdAt"),
+                    attachments = decodeStrategyAttachments(row),
                 ),
             )
         }
@@ -301,8 +406,10 @@ internal object SnapshotCodec {
                 language = s.optInt("language", 0), showGlobe = s.optBoolean("showGlobe", true),
                 tzMode = s.optInt("tzMode", 2), reminderOn = s.optBoolean("reminderOn", true),
                 reminderHour = s.optInt("reminderHour", 22).coerceIn(0, 23),
-                newsImpact = s.optInt("newsImpact", 0), startBalance = s.optDouble("startBalance", 10000.0),
-                defaultLot = s.optDouble("defaultLot", 0.1), riskPercent = s.optDouble("riskPercent", 1.0),
+                newsImpact = s.optInt("newsImpact", 0), startBalance = s.optDouble("startBalance", 0.0),
+                defaultLot = s.optDouble("defaultLot", 0.0), riskPercent = s.optDouble("riskPercent", 1.0),
+                dailyLossLimitPercent = s.optDouble("dailyLossLimitPercent", 3.0).coerceIn(0.5, 20.0),
+                maxTradesPerDay = s.optInt("maxTradesPerDay", 5).coerceIn(1, 100),
                 haptics = s.optBoolean("haptics", true), animations = s.optInt("animations", 1),
                 accent = s.optInt("accent", 0), weekendHoliday = s.optBoolean("weekendHoliday", true),
                 sessionAlerts = s.optBoolean("sessionAlerts", true), newsAlerts = s.optBoolean("newsAlerts", true),
@@ -317,6 +424,7 @@ internal object SnapshotCodec {
 
 internal data class MutableSnapshot(
     val trades: MutableList<Trade>,
+    val positions: MutableList<JournalPosition>,
     val accounts: MutableList<TradingAccount>,
     val strategies: MutableList<Strategy>,
     val strategyRevisions: MutableList<StrategyRevision>,

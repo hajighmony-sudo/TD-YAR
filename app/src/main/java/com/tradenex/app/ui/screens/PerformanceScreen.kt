@@ -51,7 +51,7 @@ fun PerformanceScreen(nav: NavController) {
     val settings = AppState.settings
     val accountStartBalance = AppState.selectedAccount.startingBalance.coerceAtLeast(1.0)
     var viewMode by remember { mutableStateOf("روزانه") }
-    val period = when (viewMode) { "روزانه" -> Period.DAY; "هفتگی" -> Period.WEEK; "ماهانه" -> Period.MONTH; else -> Period.MONTH }
+    val period = when (viewMode) { "روزانه" -> Period.DAY; "هفتگی" -> Period.WEEK; "ماهانه" -> Period.MONTH; "سالانه" -> Period.YEAR; else -> Period.MONTH }
     var selectedHeatmapDay by remember { mutableStateOf<Long?>(null) }
     val trades = AppState.visibleTrades.toList()
     val symbolGroups = remember(trades) {
@@ -67,13 +67,13 @@ fun PerformanceScreen(nav: NavController) {
     val today = AppState.today()
     val earliestDay = trades.minOfOrNull { it.epochDay } ?: today
     val windowDays = when (viewMode) {
-        "لحظه‌ای" -> (today - earliestDay + 1L).coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        "لحظه‌ای", "سالانه" -> (today - earliestDay + 1L).coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         "روزانه" -> 30
         "هفتگی" -> 84
         else -> 365
     }
     val windowStartDay = today - (windowDays - 1L)
-    val windowed = remember(period, trades) { trades.filter { it.epochDay >= windowStartDay } }
+    val windowed = remember(period, viewMode, windowStartDay, trades) { trades.filter { it.epochDay >= windowStartDay } }
     val pnlArray = remember(windowed) { windowed.map { it.pnl }.toDoubleArray() }
     val stats = remember(pnlArray) { NativeCore.stats(pnlArray) }
     val ext = remember(pnlArray) { NativeCore.performanceMetrics(pnlArray) }
@@ -95,7 +95,7 @@ fun PerformanceScreen(nav: NavController) {
     Page(title = "عملکرد من") {
         Reveal(0) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("لحظه‌ای", "روزانه", "هفتگی", "ماهانه").forEach { mode ->
+                listOf("لحظه‌ای", "روزانه", "هفتگی", "ماهانه", "سالانه").forEach { mode ->
                     TxChip(mode, viewMode == mode, { viewMode = mode }, Modifier.weight(1f))
                 }
             }

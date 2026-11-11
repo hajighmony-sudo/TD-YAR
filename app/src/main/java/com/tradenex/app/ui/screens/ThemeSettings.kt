@@ -22,11 +22,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
@@ -39,9 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tradenex.app.ui.components.TxChip
 import com.tradenex.app.ui.theme.Palette
 import com.tradenex.app.ui.theme.PanelStyle
 import com.tradenex.app.ui.theme.ThemeController
+import com.tradenex.app.ui.theme.ThemePresetStore
+import com.tradenex.app.ui.theme.UserThemePreset
 import com.tradenex.app.ui.theme.ThemeId
 import com.tradenex.app.ui.theme.Tx
 import com.tradenex.app.ui.theme.paletteOf
@@ -51,6 +60,10 @@ import kotlin.math.sin
 /** Settings > تم‌ها: pick Default or Gold, accent colour, glow strength and the Gold-only effects. */
 @Composable
 fun ThemesGroup() {
+    val context = LocalContext.current
+    var presetName by remember { mutableStateOf("") }
+    var customPresets by remember { mutableStateOf(ThemePresetStore.load(context)) }
+    var presetMessage by remember { mutableStateOf("") }
     val selected = ThemeController.theme
     SettingGroup("تم‌ها") {
         Row(
@@ -63,6 +76,41 @@ fun ThemesGroup() {
         }
         if (selected == ThemeId.GOLD) {
             Text("حذف تم Gold", color = Tx.Red, fontSize = 11.sp, modifier = Modifier.clickable { ThemeController.removeGoldTheme() }.padding(vertical = 8.dp))
+        }
+
+        Spacer(Modifier.height(12.dp))
+        SmallLabel("تم‌های شخصی")
+        Text("ترکیب فعلی رنگ، درخشش و افکت‌ها را با نام دلخواه ذخیره کن. تم پیش‌فرض قابل حذف نیست؛ تم‌های شخصی را هر زمان خواستی می‌توانی پاک کنی.", color = Tx.Muted, fontSize = 10.sp)
+        OutlinedTextField(value = presetName, onValueChange = { presetName = it.take(28) }, label = { Text("نام تم جدید") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        TxChip("ذخیره ترکیب فعلی", false, {
+            if (presetName.isBlank()) {
+                presetMessage = "برای تم شخصی یک نام وارد کن."
+            } else {
+                val preset = UserThemePreset(
+                    id = System.currentTimeMillis().toString(),
+                    name = presetName.trim(),
+                    themeKey = ThemeController.theme.key,
+                    accent = ThemeController.accent,
+                    glow = ThemeController.glow,
+                    particles = ThemeController.particles,
+                    shimmer = ThemeController.shimmer,
+                    crown = ThemeController.crown,
+                )
+                customPresets = ThemePresetStore.save(context, preset)
+                presetName = ""
+                presetMessage = "تم ذخیره شد."
+            }
+        })
+        if (presetMessage.isNotBlank()) Text(presetMessage, color = Tx.Gold, fontSize = 10.sp)
+        customPresets.forEach { preset ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(onClick = { ThemePresetStore.apply(preset) }, modifier = Modifier.weight(1f)) {
+                    Text(preset.name, color = Tx.Text, textAlign = TextAlign.Start)
+                }
+                TextButton(onClick = { customPresets = ThemePresetStore.delete(context, preset.id) }) {
+                    Text("حذف", color = Tx.Red, fontSize = 11.sp)
+                }
+            }
         }
         if (selected == ThemeId.DEFAULT) {
             SmallLabel("رنگ تأکید")

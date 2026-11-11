@@ -27,6 +27,7 @@ data class SessionState(
     val minutesToChange: Int,
     val localStart: Int,
     val length: Int,
+    val nextChange: ZonedDateTime = ZonedDateTime.now(ZoneOffset.UTC),
 )
 
 data class OverlapInfo(val a: String, val b: String, val minutes: Int, val percent: Int, val activeNow: Boolean)
@@ -58,10 +59,13 @@ object SessionEngine {
         val opens = date.atTime(def.localOpen).atZone(def.zoneId)
         val closes = (if (def.localClose <= def.localOpen) date.plusDays(1) else date)
             .atTime(def.localClose).atZone(def.zoneId)
-        val isOpen = !marketNow.isBefore(opens) && marketNow.isBefore(closes)
+        val weekday = marketNow.dayOfWeek.value in 1..5
+        val isOpen = weekday && !marketNow.isBefore(opens) && marketNow.isBefore(closes)
         val nextBoundary = if (isOpen) closes else {
-            if (marketNow.isBefore(opens)) opens
-            else date.plusDays(1).atTime(def.localOpen).atZone(def.zoneId)
+            val nextOpenDate = if (weekday && marketNow.isBefore(opens)) date else {
+                generateSequence(date.plusDays(1)) { it.plusDays(1) }.first { it.dayOfWeek.value in 1..5 }
+            }
+            nextOpenDate.atTime(def.localOpen).atZone(def.zoneId)
         }
         val displayStart = opens.withZoneSameInstant(displayZone)
         val duration = Duration.between(opens.toInstant(), closes.toInstant()).toMinutes().toInt()
@@ -71,12 +75,14 @@ object SessionEngine {
             minutesToChange = Duration.between(now, nextBoundary.toInstant()).toMinutes().toInt().coerceAtLeast(0),
             localStart = displayStart.hour * 60 + displayStart.minute,
             length = duration,
+            nextChange = nextBoundary,
         )
     }
 
     private fun isOpenAt(def: SessionDef, instant: Instant): Boolean {
         val local = instant.atZone(def.zoneId)
         val time = local.toLocalTime()
+        if (local.dayOfWeek.value !in 1..5) return false
         return if (def.localOpen < def.localClose) {
             !time.isBefore(def.localOpen) && time.isBefore(def.localClose)
         } else {

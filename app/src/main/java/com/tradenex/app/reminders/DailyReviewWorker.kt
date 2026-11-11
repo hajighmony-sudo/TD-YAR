@@ -15,11 +15,14 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.tradenex.app.MainActivity
 import com.tradenex.app.R
+import com.tradenex.app.notifications.NexNotify
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.temporal.WeekFields
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
@@ -41,6 +44,14 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
             val reason = plan?.optString("noTradeReason").orEmpty()
             val confirmed = plan?.optBoolean("confirmed", false) ?: false
             if (count == 0 && (!confirmed || reason.isBlank())) notifyReview()
+        }
+        if (reminderOn && today.dayOfWeek.value == 5) {
+            val weeklyPrefs = applicationContext.getSharedPreferences("nex_notify_weekly", Context.MODE_PRIVATE)
+            val weekKey = "${today.get(WeekFields.ISO.weekBasedYear())}-${today.get(WeekFields.ISO.weekOfWeekBasedYear())}"
+            if (weeklyPrefs.getString("sent_week", null) != weekKey) {
+                NexNotify.weeklyReport(applicationContext)
+                weeklyPrefs.edit().putString("sent_week", weekKey).apply()
+            }
         }
         ReminderScheduler.schedule(applicationContext)
         return Result.success()
@@ -64,57 +75,14 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
     }
 
     private fun notifyReview() {
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
-            NotificationChannel(ReminderScheduler.CHANNEL, "مرور روزانه معاملات", NotificationManager.IMPORTANCE_DEFAULT),
-        )
-        val intent = PendingIntent.getActivity(applicationContext, 1201, Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            data = android.net.Uri.parse("tradix://weekly_reminder")
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(applicationContext, ReminderScheduler.CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("امروز معامله‌ای نداشتی؟")
-            .setContentText("وارد TRADIX شو و دلیل نداشتن معامله را در برنامه هفتگی ثبت کن.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("اگر بازار ستاپ مناسبی نداشت یا تصمیم گرفتی معامله نکنی، دلیلش را ثبت کن تا گزارش هفتگی دقیق‌تری داشته باشی."))
-            .setContentIntent(intent)
-            .setColor(0xFFD4AF37.toInt())
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .addAction(0, "ثبت معامله", deepLink(1202, "add"))
-            .addAction(0, "بدون معامله؛ ثبت دلیل", deepLink(1203, "weekly_reminder"))
-            .addAction(0, "بینش‌ها", deepLink(1204, "insights"))
-            .setAutoCancel(true)
-            .build()
-        manager.notify(todayNotificationId(), notification)
+        NexNotify.journalReminder(applicationContext)
     }
-
-    private fun deepLink(code: Int, host: String): PendingIntent = PendingIntent.getActivity(
-        applicationContext, code,
-        Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            data = android.net.Uri.parse("tradix://$host")
-        },
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
 
     private fun todayNotificationId() = LocalDate.now().dayOfYear + 7000
 }
 
 object ReminderScheduler {
     const val CHANNEL = "tradix_daily_review"
-    const val NEWS_CHANNEL = "tradix_news_alert"
-
-    /** Schedules (or cancels) a notification [leadMinutes] before a news event. Returns false if the time already passed. */
-    fun scheduleNews(context: Context, id: Int, title: String, currency: String, atMillis: Long, enable: Boolean, leadMinutes: Int = 15): Boolean {
-        val manager = WorkManager.getInstance(context)
-        val name = "tradix_news_$id"
-        if (!enable) { manager.cancelUniqueWork(name); return true }
-        val delay = atMillis - leadMinutes * 60_000L - System.currentTimeMillis()
-        if (delay <= 0) return false
-        val data = androidx.work.Data.Builder().putString("title", title).putString("currency", currency).putLong("at", atMillis).putInt("id", id).build()
-        manager.enqueueUniqueWork(name, ExistingWorkPolicy.REPLACE, OneTimeWorkRequestBuilder<NewsAlertWorker>().setInitialDelay(delay, TimeUnit.MILLISECONDS).setInputData(data).build())
-        return true
-    }
 
     fun schedule(context: Context, reminderOn: Boolean? = null, reminderHour: Int? = null) {
         val manager = WorkManager.getInstance(context)
@@ -136,41 +104,5 @@ object ReminderScheduler {
         val delay = Duration.between(java.time.LocalDateTime.now(), target).toMillis().coerceAtLeast(60_000)
         val request = OneTimeWorkRequestBuilder<DailyReviewWorker>().setInitialDelay(delay, TimeUnit.MILLISECONDS).build()
         manager.enqueueUniqueWork("tradix_daily_review", ExistingWorkPolicy.REPLACE, request)
-    }
-}
-
-/** Fires a heads-up notification shortly before a calendar news event. */
-class NewsAlertWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
-    override fun doWork(): Result {
-        val title = inputData.getString("title").orEmpty()
-        val currency = inputData.getString("currency").orEmpty()
-        val at = inputData.getLong("at", 0L)
-        val id = inputData.getInt("id", 0)
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= 26) manager.createNotificationChannel(
-            NotificationChannel(ReminderScheduler.NEWS_CHANNEL, "هشدار اخبار اقتصادی", NotificationManager.IMPORTANCE_HIGH),
-        )
-        fun link(code: Int, host: String) = PendingIntent.getActivity(
-            applicationContext, code,
-            Intent(applicationContext, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                data = android.net.Uri.parse("tradix://$host")
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val time = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-        val n = NotificationCompat.Builder(applicationContext, ReminderScheduler.NEWS_CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("خبر $currency ساعت $time")
-            .setContentText(title)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$title\nقبل از خبر پوزیشن تازه باز نکن یا ریسک را کم کن."))
-            .setColor(0xFFD4AF37.toInt())
-            .setCategory(NotificationCompat.CATEGORY_EVENT)
-            .setContentIntent(link(1300 + id % 100, "calendar"))
-            .addAction(0, "ماشین حساب ریسک", link(1301, "calculator"))
-            .setAutoCancel(true)
-            .build()
-        manager.notify(9000 + id % 1000, n)
-        return Result.success()
     }
 }

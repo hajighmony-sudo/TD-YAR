@@ -53,16 +53,17 @@ effects (dust, shimmer, crown) are saved in SharedPreferences. The gold dust is 
 - Trade history supports BUY/SELL/WIN/LOSS filters, edit/delete with confirmation, and account-scoped CSV export.
 - Strategy edits create revision snapshots and increment the active version; new trades retain the strategy version used.
 - Sydney, Tokyo, London, and New York session state and overlap use IANA market timezones with daylight-saving transitions, while the existing globe/timeline components are retained.
-- Still outstanding: normalized Room schema and migrations (current store is a SQLite snapshot), full open/partial-fill trade lifecycle, full strategy revision history UI, complete block-based mixed-media academy, and complete Persian/English localization. The economic calendar now reads Forex Factory's public weekly JSON export with local caching and request throttling; it is an unofficial feed endpoint and can be unavailable or change. Flutter add-to-app generation and Android embedding must pass the current CI and device launch checks before release.
+- The position journal supports multiple entry/exit fills, partial closes, average prices and realized P&L. Strategy revision history has view/restore support. Education supports ordered text/image/video/document blocks. Strategy attachments and revision attachments are stored as URI references and included in password-encrypted streaming `.tx` exports; the export path is chunked and does not load multi-gigabyte media into memory. New installs no longer receive a synthetic $10,000 account, EURUSD trade defaults, or a preselected lot/result; users must enter account and trade details themselves. Existing user data is preserved, with only an untouched synthetic starter account migrated away.
+- Remaining: normalized Room schema and migrations (the current store is an atomic SQLite snapshot), full Persian/English localization across every screen, and device/launcher-specific custom shortcut removal. The economic calendar reads Forex Factory's public weekly JSON export with local caching and request throttling; it is an unofficial feed endpoint and can be unavailable or change. Flutter add-to-app generation and Android embedding must pass the current CI and device launch checks before release.
 - Existing theme tokens, colors, reusable components, and navigation styling were preserved; screens were extended additively. Run the latest Android unit tests/build and Rust tests before considering this branch release-ready.
 
 
 ## Newly added trader workflow modules
 
 - **Weekly plan:** Saturday/Sunday are shown as non-trading days; Monday-Friday have separate daily records for trade count (0-100), gross profit/loss, risk cap, daily goal, discipline checklist, plan adherence, mood, notes, and no-trade reason. Week totals and rule-based review prompts are calculated from the saved daily records.
-- **Daily no-trade review:** a WorkManager reminder is scheduled for the user-selected local hour. Weekday notifications open the weekly review form directly. Android 13+ notification permission is requested at runtime. WorkManager timing is battery-optimized and is not an exact-alarm guarantee.
-- **Education library:** lessons support ordered text, image, video, and document attachments, persisted document URI permissions, open-in-app handling, progress, deletion, and QR scanning/import.
-- **QR lesson sharing:** QR payloads contain the lesson title and text blocks. Attached binary files cannot fit inside a QR; the share action sends the QR image and selected media/files together through Android's share sheet. Importing a QR alone recreates the text lesson; attached files must be shared alongside it.
+- **Daily no-trade review:** a WorkManager reminder is scheduled for the user-selected local hour. Weekday notifications open the weekly review form directly. NEX Notify also checks session open/close transitions and schedules opt-in calendar-event reminders. Android 13+ notification permission is requested at runtime. WorkManager timing is battery-optimized and is not an exact-alarm guarantee.
+- **Education library:** lessons support ordered text, image, video, and document attachments, persisted document URI permissions, open-in-app handling, progress, deletion, and QR scanning/import. Strategies also support user-selected file attachments and versioned attachment snapshots.
+- **QR lesson sharing:** new QR payloads encrypt the lesson title and text blocks with password-derived AES-GCM; legacy unencrypted QR payloads remain importable. Attached binary files cannot fit inside a QR; use the password-encrypted streaming `.tx` package for lessons, strategies, revisions and attached files. The password must be shared separately and securely.
 - **Forex sessions:** device-local timezone is now the default display mode. Session calculations use IANA market timezones so London/New York/Sydney DST shifts and current overlaps are reflected in the displayed local clock.
 
 The weekly and education modules use isolated local stores so existing trade journal snapshots and other feature models are not rewritten by these additions.
@@ -85,6 +86,13 @@ TX AI is descriptive coaching, not investment advice, not a prediction engine, a
 
 ## App icons
 Settings > آیکون‌ها lets the user pick one of 12 launcher icons (adaptive icons via `activity-alias`, see `AndroidManifest.xml` and `AppIconsSection.kt`). The golden bull (`bull`) is the default app icon.
+
+## NEX Notify (notifications)
+
+- Native Android channels for journal, reminders and reports; persistent local inbox with category filters, read/unread state, completion, clear-all and category/global preferences.
+- Action buttons support opening the relevant screen, marking a journal reminder done and snoozing it for 30 minutes.
+- Trade-save confirmation, daily review reminders, weekly recap, session state transitions and scheduled calendar-event reminders are routed through the same notification system.
+- No notification-listener or overlay permission is used.
 
 ## Interactive globe (Sessions)
 `ui/components/Globe.kt` + `WorldGeo.kt` + `assets/world_borders.bin`: real country borders (simplified public-domain data), drag to rotate, auto-spin after 2.5 s idle, countries of open sessions glow in the session colour, animated orbits connect overlapping sessions, tap a country for its name/session.

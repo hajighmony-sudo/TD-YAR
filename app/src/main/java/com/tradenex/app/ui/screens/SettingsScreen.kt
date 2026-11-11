@@ -105,15 +105,26 @@ fun SettingsScreen(nav: NavController) {
         }
         Reveal(2) {
             SettingGroup("معامله و ریسک") {
-                StepRow("بالانس اولیه", AppState.selectedAccount.baseCurrency + " " + String.format(Locale.US, "%,.0f", AppState.selectedAccount.startingBalance),
-                    { updateSelectedBalance(-500.0) },
-                    { updateSelectedBalance(500.0) })
+                if (AppState.accounts.any { !it.archived }) {
+                    StepRow("بالانس اولیه", if (s.hideBalance) "••••" else AppState.selectedAccount.baseCurrency + " " + String.format(Locale.US, "%,.0f", AppState.selectedAccount.startingBalance),
+                        { updateSelectedBalance(-500.0) },
+                        { updateSelectedBalance(500.0) })
+                } else {
+                    Text("برای تنظیم بالانس، ابتدا حساب خودت را در بخش حساب‌ها ثبت کن.", color = Tx.Muted, fontSize = 11.sp)
+                }
                 StepRow("لات پیش‌فرض", String.format(Locale.US, "%.2f", s.defaultLot),
                     { update { it.copy(defaultLot = (round((it.defaultLot - 0.05) * 100) / 100).coerceAtLeast(0.01)) } },
                     { update { it.copy(defaultLot = round((it.defaultLot + 0.05) * 100) / 100) } })
                 StepRow("ریسک هر معامله", String.format(Locale.US, "%.2f%%", s.riskPercent),
                     { update { it.copy(riskPercent = (it.riskPercent - 0.25).coerceAtLeast(0.25)) } },
                     { update { it.copy(riskPercent = (it.riskPercent + 0.25).coerceAtMost(10.0)) } })
+                StepRow("سقف ضرر روزانه", String.format(Locale.US, "%.1f%%", s.dailyLossLimitPercent),
+                    { update { it.copy(dailyLossLimitPercent = (it.dailyLossLimitPercent - 0.5).coerceAtLeast(0.5)) } },
+                    { update { it.copy(dailyLossLimitPercent = (it.dailyLossLimitPercent + 0.5).coerceAtMost(20.0)) } })
+                StepRow("حداکثر معاملات روزانه", s.maxTradesPerDay.toString(),
+                    { update { it.copy(maxTradesPerDay = (it.maxTradesPerDay - 1).coerceAtLeast(1)) } },
+                    { update { it.copy(maxTradesPerDay = (it.maxTradesPerDay + 1).coerceAtMost(100)) } })
+                Text("این سقف‌ها فقط هشدار و ابزار ثبت انضباط هستند؛ برنامه معامله‌ای را مسدود یا اجرا نمی‌کند.", color = Tx.Muted, fontSize = 10.sp)
                 SwitchRow("شنبه و یکشنبه تعطیل", "در نقشه حرارتی و تقویم خط‌خورده می‌شود", s.weekendHoliday) { v -> update { it.copy(weekendHoliday = v) } }
             }
         }

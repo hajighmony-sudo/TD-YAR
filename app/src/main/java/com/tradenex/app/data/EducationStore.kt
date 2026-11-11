@@ -22,6 +22,10 @@ data class EducationLesson(
     val createdAt: Long,
     val blocks: List<EducationBlock> = emptyList(),
     val progress: Float = 0f,
+    val category: String = "عمومی",
+    val tags: List<String> = emptyList(),
+    val favorite: Boolean = false,
+    val linkedStrategyId: Long? = null,
 )
 
 object EducationStore {
@@ -49,7 +53,16 @@ object EducationStore {
                         displayName = b.optString("displayName"),
                     )
                 }
-                lessons.add(EducationLesson(row.optLong("id"), row.optString("title"), row.optLong("createdAt"), parsed, row.optDouble("progress").toFloat()))
+                val tagRows = row.optJSONArray("tags") ?: JSONArray()
+                lessons.add(
+                    EducationLesson(
+                        row.optLong("id"), row.optString("title"), row.optLong("createdAt"), parsed,
+                        row.optDouble("progress").toFloat(), row.optString("category", "عمومی"),
+                        (0 until tagRows.length()).mapNotNull { tagRows.optString(it).takeIf(String::isNotBlank) },
+                        row.optBoolean("favorite", false),
+                        row.optLong("linkedStrategyId").takeIf { row.has("linkedStrategyId") && it > 0L },
+                    ),
+                )
             }
         }
     }
@@ -83,6 +96,18 @@ object EducationStore {
         if (index >= 0) { lessons[index] = lessons[index].copy(blocks = lessons[index].blocks.filterNot { it.id == blockId }); persist() }
     }
 
+    fun updateMeta(lessonId: Long, category: String, tags: List<String>, favorite: Boolean, linkedStrategyId: Long?) {
+        val index = lessons.indexOfFirst { it.id == lessonId }
+        if (index < 0) return
+        lessons[index] = lessons[index].copy(
+            category = category.trim().ifBlank { "عمومی" },
+            tags = tags.map { it.trim() }.filter(String::isNotBlank).distinct().take(20),
+            favorite = favorite,
+            linkedStrategyId = linkedStrategyId,
+        )
+        persist()
+    }
+
     fun updateProgress(lessonId: Long, progress: Float) {
         val index = lessons.indexOfFirst { it.id == lessonId }
         if (index >= 0) { lessons[index] = lessons[index].copy(progress = progress.coerceIn(0f, 1f)); persist() }
@@ -94,7 +119,15 @@ object EducationStore {
     }
 
     fun importTextLesson(title: String, blocks: List<EducationBlock>) {
-        lessons.add(0, EducationLesson(System.currentTimeMillis(), title, System.currentTimeMillis(), blocks))
+        importLesson(EducationLesson(System.currentTimeMillis(), title, System.currentTimeMillis(), blocks))
+    }
+
+    fun importLesson(lesson: EducationLesson) {
+        val imported = lesson.copy(
+            id = System.currentTimeMillis(),
+            blocks = lesson.blocks.mapIndexed { index, block -> block.copy(id = System.nanoTime() + index) },
+        )
+        lessons.add(0, imported)
         persist()
     }
 
@@ -103,6 +136,8 @@ object EducationStore {
         lessons.forEach { lesson ->
             rows.put(JSONObject().apply {
                 put("id", lesson.id); put("title", lesson.title); put("createdAt", lesson.createdAt); put("progress", lesson.progress)
+                put("category", lesson.category); put("tags", JSONArray(lesson.tags)); put("favorite", lesson.favorite)
+                lesson.linkedStrategyId?.let { put("linkedStrategyId", it) }
                 put("blocks", JSONArray().apply {
                     lesson.blocks.forEach { b ->
                         put(JSONObject().apply {

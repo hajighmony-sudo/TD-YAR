@@ -1,5 +1,13 @@
 package com.tradenex.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -47,6 +56,7 @@ import com.tradenex.app.data.Analytics
 import com.tradenex.app.data.AppState
 import com.tradenex.app.data.Strategy
 import com.tradenex.app.data.StrategyRevision
+import com.tradenex.app.data.StrategyAttachment
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.GoldButton
 import com.tradenex.app.ui.components.IconBox
@@ -55,12 +65,43 @@ import com.tradenex.app.ui.theme.Tx
 
 @Composable
 fun StrategiesScreen(nav: NavController) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var ruleInput by remember { mutableStateOf("") }
+    var attachments by remember { mutableStateOf(emptyList<StrategyAttachment>()) }
+    var editAttachments by remember { mutableStateOf(emptyList<StrategyAttachment>()) }
+    var pickingForEdit by remember { mutableStateOf(false) }
+    val attachmentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            val metadata = runCatching {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        (if (nameIndex >= 0) cursor.getString(nameIndex) else null) to
+                            (if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else 0L)
+                    } else null
+                }
+            }.getOrNull()
+            val attachment = StrategyAttachment(
+                id = System.currentTimeMillis(),
+                uri = uri.toString(),
+                mimeType = context.contentResolver.getType(uri) ?: "*/*",
+                displayName = metadata?.first?.takeIf(String::isNotBlank) ?: uri.lastPathSegment?.substringAfterLast('/') ?: "فایل پیوست",
+                sizeBytes = metadata?.second ?: 0L,
+            )
+            if (pickingForEdit) editAttachments = editAttachments + attachment else attachments = attachments + attachment
+        }
+    }
     val rules = remember { mutableStateListOf<String>() }
     var editingStrategy by remember { mutableStateOf<Strategy?>(null) }
+    var deletingStrategy by remember { mutableStateOf<Strategy?>(null) }
+    var historyStrategy by remember { mutableStateOf<Strategy?>(null) }
     var editName by remember { mutableStateOf("") }
     var editRules by remember { mutableStateOf("") }
+    var strategyQuery by remember { mutableStateOf("") }
+    var includeInactive by remember { mutableStateOf(false) }
     val n = AppState.visibleTrades.size
 
     Page(title = "استراتژی‌های من", onBack = { nav.popBackStack() }) {
@@ -89,13 +130,31 @@ fun StrategiesScreen(nav: NavController) {
             }
         }
 
-        AppState.strategies.forEachIndexed { idx, s ->
+        TxField(strategyQuery, { strategyQuery = it }, "جست‌وجوی نام یا قوانین استراتژی")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            StrategyFilterChip("فعال‌ها", !includeInactive) { includeInactive = false }
+            StrategyFilterChip("همه استراتژی‌ها", includeInactive) { includeInactive = true }
+        }
+        val filteredStrategies = AppState.strategies.filter { strategy ->
+            (includeInactive || strategy.active) &&
+                (strategyQuery.isBlank() ||
+                    strategy.name.contains(strategyQuery, ignoreCase = true) ||
+                    strategy.rules.any { it.contains(strategyQuery, ignoreCase = true) } ||
+                    strategy.attachments.any { it.displayName.contains(strategyQuery, ignoreCase = true) })
+        }
+        if (filteredStrategies.isEmpty()) {
+            GlassCard(Modifier.fillMaxWidth()) {
+                Text("استراتژی‌ای با این فیلتر پیدا نشد.", color = Tx.Muted, modifier = Modifier.padding(14.dp))
+            }
+        }
+        filteredStrategies.forEachIndexed { idx, s ->
             Reveal(idx + 1) {
                 StrategyCard(s, n, onEdit = {
                     editingStrategy = s
                     editName = s.name
                     editRules = s.rules.joinToString("\n")
-                })
+                    editAttachments = s.attachments
+                }, onDelete = { deletingStrategy = s }, onHistory = { historyStrategy = s })
             }
         }
 
@@ -124,11 +183,26 @@ fun StrategiesScreen(nav: NavController) {
                             }
                         }
                     }
+                    Text("فایل‌های پیوست استراتژی", color = Tx.Muted, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconBox(Icons.Rounded.Add, "افزودن فایل") {
+                            pickingForEdit = false
+                            attachmentPicker.launch(arrayOf("*/*"))
+                        }
+                        Text(attachments.size.toString() + " فایل انتخاب شده؛ فایل‌ها با URI نگهداری می‌شوند و در حافظه برنامه کپی نمی‌شوند.", color = Tx.Muted, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                    }
+                    attachments.forEach { file ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f).clickable { runCatching { openStrategyAttachment(context, file) } })
+                            Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { attachments = attachments.filterNot { it.id == file.id } })
+                        }
+                    }
                     GoldButton("ذخیره استراتژی") {
                         if (name.isNotBlank()) {
-                            AppState.addStrategy(Strategy(System.currentTimeMillis(), name.trim(), rules.toList(), true))
+                            AppState.addStrategy(Strategy(System.currentTimeMillis(), name.trim(), rules.toList(), true, attachments = attachments.toList()))
                             name = ""
                             rules.clear()
+                            attachments = emptyList()
                         }
                     }
                 }
@@ -146,6 +220,17 @@ fun StrategiesScreen(nav: NavController) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TxField(editName, { editName = it }, "نام استراتژی")
                     TxField(editRules, { editRules = it }, "قوانین را با خط جدید جدا کن")
+                    Text("فایل‌های پیوست", color = Tx.Muted, fontSize = 11.sp)
+                    IconBox(Icons.Rounded.Add, "افزودن فایل") {
+                        pickingForEdit = true
+                        attachmentPicker.launch(arrayOf("*/*"))
+                    }
+                    editAttachments.forEach { file ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(file.displayName, color = Tx.Text, fontSize = 11.sp, modifier = Modifier.weight(1f).clickable { runCatching { openStrategyAttachment(context, file) } })
+                            Icon(Icons.Rounded.Delete, "حذف پیوست", tint = Tx.Muted, modifier = Modifier.size(18.dp).clickable { editAttachments = editAttachments.filterNot { it.id == file.id } })
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -160,12 +245,14 @@ fun StrategiesScreen(nav: NavController) {
                                 name = selected.name,
                                 rules = selected.rules,
                                 createdAt = System.currentTimeMillis(),
+                                attachments = selected.attachments,
                             ),
                         )
                         AppState.strategies[index] = selected.copy(
                             name = editName.trim(),
                             rules = editRules.lines().map(String::trim).filter(String::isNotBlank),
                             version = selected.version + 1,
+                            attachments = editAttachments.toList(),
                         )
                         AppState.persist()
                     }
@@ -177,10 +264,92 @@ fun StrategiesScreen(nav: NavController) {
             },
         )
     }
+
+    historyStrategy?.let { selected ->
+        val revisions = AppState.strategyRevisions.filter { it.strategyId == selected.id }.sortedByDescending { it.version }
+        AlertDialog(
+            onDismissRequest = { historyStrategy = null },
+            containerColor = Tx.Dialog,
+            title = { Text("تاریخچه «${selected.name}»", color = Tx.Text) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("نسخه فعلی: V${selected.version}", color = Tx.Gold, fontWeight = FontWeight.Bold)
+                    if (revisions.isEmpty()) {
+                        Text("هنوز نسخه قبلی برای این استراتژی ذخیره نشده است.", color = Tx.Muted)
+                    } else {
+                        revisions.forEach { revision ->
+                            Column(
+                                Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.04f), RoundedCornerShape(10.dp)).padding(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Text("V${revision.version} · ${revision.name}", color = Tx.Text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                revision.rules.forEach { rule -> Text("• $rule", color = Tx.Muted, fontSize = 10.sp) }
+                                TextButton(onClick = {
+                                    val index = AppState.strategies.indexOfFirst { it.id == selected.id }
+                                    if (index >= 0) {
+                                        val current = AppState.strategies[index]
+                                        AppState.strategyRevisions.add(
+                                            StrategyRevision(
+                                                id = System.currentTimeMillis(),
+                                                strategyId = current.id,
+                                                version = current.version,
+                                                name = current.name,
+                                                rules = current.rules,
+                                                createdAt = System.currentTimeMillis(),
+                                                attachments = current.attachments,
+                                            ),
+                                        )
+                                        AppState.strategies[index] = current.copy(
+                                            name = revision.name,
+                                            rules = revision.rules,
+                                            version = current.version + 1,
+                                            attachments = revision.attachments,
+                                        )
+                                        AppState.persist()
+                                    }
+                                    historyStrategy = null
+                                }) { Text("بازیابی این نسخه", color = Tx.Gold, fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { historyStrategy = null }) { Text("بستن", color = Tx.Gold) } },
+        )
+    }
+
+    deletingStrategy?.let { selected ->
+        AlertDialog(
+            onDismissRequest = { deletingStrategy = null },
+            containerColor = Tx.Dialog,
+            title = { Text("حذف استراتژی؟", color = Tx.Text) },
+            text = { Text("استراتژی «${selected.name}» حذف شود؟ سوابق معاملات قبلی دست‌نخورده می‌مانند.", color = Tx.Muted) },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppState.deleteStrategy(selected.id)
+                    deletingStrategy = null
+                }) { Text("حذف استراتژی", color = Tx.Red) }
+            },
+            dismissButton = { TextButton(onClick = { deletingStrategy = null }) { Text("انصراف", color = Tx.Muted) } },
+        )
+    }
+}
+
+
+private fun openStrategyAttachment(context: android.content.Context, attachment: StrategyAttachment) {
+    val source = Uri.parse(attachment.uri)
+    val uri = if (source.scheme == "file") {
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(source.path ?: error("مسیر فایل نامعتبر است")))
+    } else source
+    context.startActivity(
+        Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, attachment.mimeType.ifBlank { "*/*" })
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+    )
 }
 
 @Composable
-private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit) {
+private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit, onDelete: () -> Unit, onHistory: () -> Unit) {
     val visible = AppState.visibleTrades
     val mine = remember(s.name, visible) { visible.filter { it.strategy == s.name }.sortedWith(compareBy({ it.epochDay }, { it.id })) }
     val net = mine.sumOf { it.pnl }
@@ -194,8 +363,11 @@ private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(s.name, color = if (s.active) Tx.Text else Tx.Muted, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-                Text("نسخه V${s.version} · ${s.rules.size} قانون · ${mine.size} معامله", color = Tx.Muted, fontSize = 11.sp)
+                Text("نسخه V${s.version} · ${s.rules.size} قانون · ${s.attachments.size} فایل · ${mine.size} معامله", color = Tx.Muted, fontSize = 11.sp)
                 Text(s.rules.take(2).joinToString(" · "), color = Tx.Muted, fontSize = 10.sp, maxLines = 1)
+                TextButton(onClick = onHistory) {
+                    Text("تاریخچه نسخه‌ها · ${AppState.strategyRevisions.count { it.strategyId == s.id }}", color = Tx.Gold, fontSize = 10.sp)
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spark(curve, c, Modifier.width(72.dp).height(24.dp))
@@ -216,7 +388,7 @@ private fun StrategyCard(s: Strategy, tradeCount: Int, onEdit: () -> Unit) {
                     Icons.Rounded.Delete,
                     "حذف استراتژی",
                     tint = Tx.Muted,
-                    modifier = Modifier.size(22.dp).clickable { AppState.deleteStrategy(s.id) },
+                    modifier = Modifier.size(22.dp).clickable(onClick = onDelete),
                 )
             }
         }
@@ -253,5 +425,20 @@ private fun Spark(values: List<Double>, color: Color, modifier: Modifier) {
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         drawPath(path, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+
+@Composable
+private fun StrategyFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) Tx.Gold.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.04f))
+            .border(1.dp, if (selected) Tx.Gold else Color.White.copy(alpha = 0.16f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(label, color = if (selected) Tx.Gold else Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }

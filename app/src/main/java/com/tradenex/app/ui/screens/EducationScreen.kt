@@ -63,6 +63,7 @@ import com.tradenex.app.data.EducationBlockType
 import com.tradenex.app.data.EducationLesson
 import com.tradenex.app.data.EducationQr
 import com.tradenex.app.data.EducationStore
+import com.tradenex.app.data.AppState
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
@@ -74,7 +75,8 @@ import java.io.File
 fun EducationScreen(nav: NavController) {
     val context = LocalContext.current
     var filter by remember { mutableStateOf("همه") }
-    var query by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var favoritesOnly by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Long?>(null) }
@@ -105,13 +107,15 @@ fun EducationScreen(nav: NavController) {
             busy = true; message = "در حال ساخت بسته‌ی .tx …"
             val pass = txPassword
             val snapshot = EducationStore.lessons.toList()
+            val strategySnapshot = AppState.strategies.toList()
+            val revisionSnapshot = AppState.strategyRevisions.toList()
             scope.launch {
                 val r = withContext(Dispatchers.IO) {
-                    runCatching { context.contentResolver.openOutputStream(uri)!!.use { TxPackage.export(context, snapshot, pass, it) } }
+                    runCatching { context.contentResolver.openOutputStream(uri)!!.use { TxPackage.export(context, snapshot, pass, it, strategySnapshot, revisionSnapshot) } }
                 }
                 busy = false
                 message = r.fold(
-                    { "بسته‌ی .tx ساخته شد: ${it.lessons} درس، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} فایل قابل خواندن نبود)" else "" },
+                    { "بسته‌ی .tx ساخته شد: ${it.lessons} درس، ${it.strategies} استراتژی، ${it.revisions} نسخه، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} فایل قابل خواندن نبود)" else "" },
                     { "ساخت بسته ممکن نشد: ${it.message}" },
                 )
             }
@@ -127,7 +131,7 @@ fun EducationScreen(nav: NavController) {
                 }
                 busy = false
                 message = r.fold(
-                    { "وارد شد: ${it.lessons} درس، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} مورد ناقص)" else "" },
+                    { "وارد شد: ${it.lessons} درس، ${it.strategies} استراتژی، ${it.revisions} نسخه، ${it.files} فایل" + if (it.skipped > 0) " (${it.skipped} مورد ناقص)" else "" },
                     { if (it is TxPackage.BadPackage) it.message ?: "فایل نامعتبر" else "ورود ممکن نشد: ${it.message}" },
                 )
             }
@@ -136,24 +140,32 @@ fun EducationScreen(nav: NavController) {
     val scanner = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val scanned = IntentIntegrator.parseActivityResult(Activity.RESULT_OK, result.data)?.contents
-            val imported = runCatching { scanned?.let(EducationQr::decodePayload) }.getOrNull()
+            val decoded = runCatching { scanned?.let { EducationQr.decodePayload(it, txPassword) } }
+            val imported = decoded.getOrNull()
             if (imported != null) {
                 EducationStore.importTextLesson(imported.first, imported.second)
                 message = "درس متنی با موفقیت دریافت شد."
-            } else if (scanned != null) message = "این QR متعلق به یک درس TRADIX نیست یا قابل خواندن نیست."
+            } else if (scanned != null) {
+                message = decoded.exceptionOrNull()?.message ?: "این QR متعلق به یک درس TRADIX نیست یا قابل خواندن نیست."
+            }
         }
     }
 
     val categories = listOf("همه", "متن", "عکس", "ویدیو", "فایل")
     val visible = EducationStore.lessons.filter { lesson ->
-        (query.isBlank() || lesson.title.contains(query.trim(), ignoreCase = true)) && (filter == "همه" || lesson.blocks.any { block ->
+        val matchesType = filter == "همه" || lesson.blocks.any { block ->
             when (filter) {
                 "متن" -> block.type == EducationBlockType.TEXT
                 "عکس" -> block.type == EducationBlockType.IMAGE
                 "ویدیو" -> block.type == EducationBlockType.VIDEO
                 else -> block.type == EducationBlockType.FILE
             }
-        })
+        }
+        val matchesSearch = searchQuery.isBlank() ||
+            lesson.title.contains(searchQuery, ignoreCase = true) ||
+            lesson.category.contains(searchQuery, ignoreCase = true) ||
+            lesson.tags.any { it.contains(searchQuery, ignoreCase = true) }
+        matchesType && matchesSearch && (!favoritesOnly || lesson.favorite)
     }
 
     Page(title = "آموزش و دانش", onBack = { nav.popBackStack() }) {
@@ -161,16 +173,16 @@ fun EducationScreen(nav: NavController) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionTitle("کتابخانه آموزشی", "درس‌ها، فایل‌ها و یادداشت‌های شخصی")
-                    TxField(query, { query = it }, "جست‌وجوی عنوان درس")
-                    Text("${EducationStore.lessons.size} درس · میانگین پیشرفت ${(EducationStore.lessons.map { it.progress }.average().takeIf { !it.isNaN() } ?: 0.0).times(100).toInt()}٪", color = Tx.Muted, fontSize = 10.sp)
+                    TxField(searchQuery, { searchQuery = it }, "جست‌وجوی عنوان، دسته یا برچسب")
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         categories.forEach { TxChip(it, filter == it, { filter = it }) }
                     }
-                    Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): همه‌ی درس‌ها و فایل‌هایشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. رمز اختیاری است ولی امنیت واقعی را همان می‌دهد.", color = Tx.Muted, fontSize = 10.sp)
-                    TxField(txPassword, { txPassword = it }, "رمز بسته (اختیاری)")
+                    TxChip("★ محبوب‌ها", favoritesOnly, { favoritesOnly = !favoritesOnly })
+                    Text("بسته‌ی رمزنگاری‌شده‌ی .tx (آفلاین): درس‌ها، استراتژی‌ها، نسخه‌ها و فایل‌های پیوستشان را در یک فایل بگیر و برای دوستت بفرست؛ فقط TRADIX می‌تواند بازش کند. برای رمزنگاری واقعی، رمز عبور الزامی است.", color = Tx.Muted, fontSize = 10.sp)
+                    TxField(txPassword, { txPassword = it }, "رمز مشترک برای .tx و QR (الزامی)")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TxChip(if (busy) "…" else "خروجی .tx", false, { if (!busy && EducationStore.lessons.isNotEmpty()) txExport.launch("tradix-education.tx") else if (EducationStore.lessons.isEmpty()) message = "درسی برای خروجی گرفتن نیست." })
-                        TxChip("ورود .tx", false, { if (!busy) txImport.launch(arrayOf("*/*")) })
+                        TxChip(if (busy) "…" else "خروجی .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای رمزنگاری فایل .tx ابتدا رمز تعیین کن." else if (EducationStore.lessons.isNotEmpty() || AppState.strategies.isNotEmpty()) txExport.launch("td-yar-full-content.tx") else message = "درس یا استراتژی‌ای برای خروجی گرفتن نیست." })
+                        TxChip("ورود .tx", false, { if (busy) Unit else if (txPassword.isBlank()) message = "برای بازکردن فایل .tx رمز آن را وارد کن." else txImport.launch(arrayOf("*/*")) })
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TxChip("＋ ساخت درس", true, { creating = true })
@@ -190,9 +202,11 @@ fun EducationScreen(nav: NavController) {
         visible.forEachIndexed { index, lesson ->
             Reveal(index + 1) {
                 LessonRow(lesson, onOpen = { selected = if (selected == lesson.id) null else lesson.id }, onQr = {
-                    runCatching {
+                    if (txPassword.isBlank()) {
+                        message = "برای ساخت QR رمزنگاری‌شده، ابتدا در بالای صفحه رمز تعیین کن."
+                    } else runCatching {
                         qrLesson = lesson
-                        qrBitmap = EducationQr.bitmap(EducationQr.encode(lesson))
+                        qrBitmap = EducationQr.bitmap(EducationQr.encode(lesson, txPassword))
                     }.onFailure { message = it.message ?: "ساخت QR ممکن نشد." }
                 }, onDelete = { EducationStore.delete(lesson.id); if (selected == lesson.id) selected = null })
                 if (selected == lesson.id) {
@@ -234,30 +248,27 @@ fun EducationScreen(nav: NavController) {
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Image(qrBitmap!!.asImageBitmap(), contentDescription = "QR code for lesson", modifier = Modifier.size(240.dp).clip(RoundedCornerShape(8.dp)))
-                    Text("این QR عنوان و متن‌های درس را منتقل می‌کند. فایل‌های عکس، ویدیو و PDF باید همراه QR از طریق اشتراک‌گذاری فایل ارسال شوند.", color = Tx.Muted, fontSize = 11.sp)
+                    Text("این QR عنوان و متن‌های درس را رمزنگاری‌شده منتقل می‌کند. فایل‌های عکس، ویدیو و PDF را با خروجی .tx و همین رمز ارسال کن؛ فایل‌ها داخل QR جا نمی‌شوند.", color = Tx.Muted, fontSize = 11.sp)
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     runCatching {
-                        val payload = EducationQr.encode(qrLesson!!)
+                        val payload = EducationQr.encode(qrLesson!!, txPassword)
                         val dir = File(context.cacheDir, "shared_qr").apply { mkdirs() }
                         val file = File(dir, "tradix_lesson_${qrLesson!!.id}.png")
                         file.outputStream().use { qrBitmap!!.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                        val attachments = qrLesson!!.blocks.mapNotNull { it.uri.takeIf(String::isNotBlank)?.let(Uri::parse) }
-                        val streams = arrayListOf(uri).apply { addAll(attachments) }
-                        val send = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                            type = "*/*"
-                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams)
-                            putExtra(Intent.EXTRA_TEXT, "درس TRADIX: ${qrLesson!!.title}\nکد واردسازی: $payload")
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "image/png"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            putExtra(Intent.EXTRA_TEXT, "درس TRADIX: " + qrLesson!!.title + "\nکد واردسازی رمزنگاری‌شده: " + payload + "\nرمز را جداگانه و امن با گیرنده به اشتراک بگذار.")
                             clipData = ClipData.newUri(context.contentResolver, "درس TRADIX", uri)
-                            attachments.forEach { clipData?.addItem(ClipData.Item(it)) }
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری درس TRADIX"))
+                        context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری QR رمزنگاری‌شده"))
                     }.onFailure { message = it.message ?: "اشتراک‌گذاری انجام نشد." }
-                }) { Text("اشتراک‌گذاری QR و فایل‌ها", color = Tx.Gold) }
+                }) { Text("اشتراک‌گذاری QR رمزنگاری‌شده", color = Tx.Gold) }
             },
             dismissButton = { TextButton(onClick = { qrLesson = null; qrBitmap = null }) { Text("بستن", color = Tx.Muted) } },
         )
@@ -276,7 +287,10 @@ private fun LessonRow(lesson: EducationLesson, onOpen: () -> Unit, onQr: () -> U
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(lesson.title, color = Tx.Text, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-                    Text("${lesson.blocks.size} بخش آموزشی · ${lesson.blocks.count { it.type == EducationBlockType.TEXT }} متن", color = Tx.Muted, fontSize = 10.sp)
+                    Text("${lesson.category} · ${lesson.blocks.size} بخش آموزشی · ${lesson.blocks.count { it.type == EducationBlockType.TEXT }} متن", color = Tx.Muted, fontSize = 10.sp)
+                    if (lesson.tags.isNotEmpty() || lesson.favorite) {
+                        Text((if (lesson.favorite) "★ محبوب  " else "") + lesson.tags.joinToString(" · "), color = Tx.Gold, fontSize = 9.sp, maxLines = 1)
+                    }
                 }
                 IconBox(Icons.Rounded.QrCode2, "ساخت و اشتراک QR", onQr)
                 IconBox(Icons.Rounded.Delete, "حذف درس", onDelete)
@@ -291,15 +305,45 @@ private fun LessonRow(lesson: EducationLesson, onOpen: () -> Unit, onQr: () -> U
 @Composable
 private fun LessonEditor(lesson: EducationLesson, context: android.content.Context, onRemove: (Long) -> Unit, onText: (String) -> Unit, onPick: () -> Unit, onProgress: (Float) -> Unit) {
     var text by remember(lesson.id, lesson.blocks.size) { mutableStateOf("") }
+    var category by remember(lesson.id) { mutableStateOf(lesson.category) }
+    var tags by remember(lesson.id) { mutableStateOf(lesson.tags.joinToString(", ")) }
+    var favorite by remember(lesson.id) { mutableStateOf(lesson.favorite) }
+    var linkedStrategyId by remember(lesson.id) { mutableStateOf(lesson.linkedStrategyId) }
     GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionTitle("محتوای مبحث", "ترتیب متن و فایل‌ها حفظ می‌شود")
+            Text("دسته‌بندی درس", color = Tx.Muted, fontSize = 11.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                listOf("عمومی", "فارکس", "تحلیل تکنیکال", "استراتژی", "روان‌شناسی", "مدیریت ریسک").forEach {
+                    TxChip(it, category == it, { category = it })
+                }
+            }
+            TxField(tags, { tags = it }, "برچسب‌ها را با کاما جدا کن")
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TxChip(if (favorite) "★ در محبوب‌ها" else "☆ افزودن به محبوب‌ها", favorite, { favorite = !favorite })
+            }
+            if (AppState.strategies.isNotEmpty()) {
+                Text("اتصال به استراتژی", color = Tx.Muted, fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    TxChip("بدون لینک", linkedStrategyId == null, { linkedStrategyId = null })
+                    AppState.strategies.forEach { strategy ->
+                        TxChip(strategy.name, linkedStrategyId == strategy.id, { linkedStrategyId = strategy.id })
+                    }
+                }
+            }
+            TextButton(onClick = {
+                EducationStore.updateMeta(lesson.id, category, tags.split(",").map { it.trim() }, favorite, linkedStrategyId)
+            }) { Text("ذخیره مشخصات درس", color = Tx.Gold) }
             lesson.blocks.forEach { block ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.035f))
                     .clickable(enabled = block.uri.isNotBlank()) {
                         runCatching {
+                            val sourceUri = Uri.parse(block.uri)
+                            val openUri = if (sourceUri.scheme == "file") {
+                                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(sourceUri.path ?: error("مسیر فایل نامعتبر است")))
+                            } else sourceUri
                             context.startActivity(Intent(Intent.ACTION_VIEW)
-                                .setDataAndType(Uri.parse(block.uri), block.mimeType.ifBlank { "*/*" })
+                                .setDataAndType(openUri, block.mimeType.ifBlank { "*/*" })
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
                         }
                     }.padding(9.dp),

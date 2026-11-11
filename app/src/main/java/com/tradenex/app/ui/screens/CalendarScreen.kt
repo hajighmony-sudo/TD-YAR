@@ -47,6 +47,8 @@ import com.tradenex.app.data.AppState
 import com.tradenex.app.data.ForexFactoryCalendarStore
 import com.tradenex.app.data.ForexFactoryEvent
 import com.tradenex.app.data.JalaliCalendar
+import com.tradenex.app.data.NewsLocalization
+import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.IconBox
 import com.tradenex.app.ui.components.SectionTitle
@@ -79,8 +81,11 @@ fun CalendarScreen(nav: NavController) {
     var tab by remember { mutableStateOf(0) }
     var offset by remember { mutableStateOf(0) }
     var filter by remember { mutableStateOf(0) }
-    var remind by remember { mutableStateOf(setOf<Int>()) }
     val context = LocalContext.current
+    val reminderPrefs = remember(context) { context.getSharedPreferences("nex_calendar_reminders", android.content.Context.MODE_PRIVATE) }
+    var remind by remember {
+        mutableStateOf(reminderPrefs.getStringSet("ids", emptySet())?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet())
+    }
     var refreshCounter by remember { mutableStateOf(0) }
     var selectedNewsEvent by remember { mutableStateOf<ForexFactoryEvent?>(null) }
     var newsEvents by remember { mutableStateOf(emptyList<ForexFactoryEvent>()) }
@@ -134,7 +139,47 @@ fun CalendarScreen(nav: NavController) {
         Text("امروز: ${jalaliText(today)}", color = Tx.Gold, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
 
         if (tab == 0) {
+            val monthStart = JalaliCalendar.toGregorian(selectedJalaliYear, selectedJalaliMonth, 1).toEpochDay()
+            val monthEnd = JalaliCalendar.toGregorian(
+                selectedJalaliYear, selectedJalaliMonth,
+                JalaliCalendar.daysInMonth(selectedJalaliYear, selectedJalaliMonth),
+            ).toEpochDay()
+            val monthTrades = trades.filter { it.epochDay in monthStart..monthEnd }
+            val monthNet = monthTrades.sumOf { it.pnl }
+            val activeDays = monthTrades.map { it.epochDay }.distinct().size
+            val greenDays = monthTrades.groupBy { it.epochDay }.count { (_, dayTrades) -> dayTrades.sumOf { it.pnl } > 0 }
             Reveal(1) {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        SectionTitle("خلاصه ماه انتخاب‌شده", "${monthTrades.size} معامله در ${activeDays} روز")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text("سود/زیان خالص", color = Tx.Muted, fontSize = 10.sp)
+                                Text(
+                                    if (settings.hideBalance) "•••" else Analytics.money(monthNet),
+                                    color = if (monthNet >= 0) Tx.Green else Tx.Red,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("روزهای مثبت", color = Tx.Muted, fontSize = 10.sp)
+                                Text("$greenDays", color = Tx.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("میانگین هر روز فعال", color = Tx.Muted, fontSize = 10.sp)
+                                Text(
+                                    if (settings.hideBalance || activeDays == 0) "—" else Analytics.money(monthNet / activeDays),
+                                    color = if (monthNet >= 0) Tx.Green else Tx.Red,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Reveal(2) {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -263,23 +308,6 @@ fun CalendarScreen(nav: NavController) {
                     }
                 }
             }
-            run {
-                val nowMs = System.currentTimeMillis()
-                val next = newsEvents.filter { it.impact == 2 && it.timestampMillis > nowMs }.minByOrNull { it.timestampMillis }
-                if (next != null) {
-                    val mins = ((next.timestampMillis - nowMs) / 60000).toInt()
-                    val txt = if (mins >= 60) "${mins / 60} ساعت و ${mins % 60} دقیقه" else "$mins دقیقه"
-                    Reveal(2) {
-                        GlassCard(Modifier.fillMaxWidth(), border = Tx.Red.copy(alpha = 0.5f)) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text("خبر مهم بعدی (${next.currency})", color = Tx.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text(next.title, color = Tx.Text, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-                                Text("$txt دیگر · قبل از آن معامله‌ی تازه باز نکن یا ریسک را کم کن", color = Tx.Muted, fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-            }
             Reveal(2) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     listOf("همه", "High", "USD", "EUR", "GBP", "JPY").forEachIndexed { i, label ->
@@ -365,21 +393,16 @@ fun CalendarScreen(nav: NavController) {
                                         Text(event.currency, color = Tx.Text, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                                     }
                                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                        Text(event.title, color = Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                                        Text(NewsLocalization.title(event.title, settings.language), color = Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2)
                                         Text(
-                                            when (event.impact) {
-                                                2 -> "تأثیر بالا"
-                                                1 -> "تأثیر متوسط"
-                                                -1 -> "تعطیلی"
-                                                else -> "تأثیر کم"
-                                            },
+                                            NewsLocalization.impact(event.impact, settings.language),
                                             color = impactColor,
                                             fontSize = 10.sp,
                                         )
                                         Text(
-                                            "قبلی: " + event.previous.ifBlank { "—" } +
-                                                " · پیش‌بینی: " + event.forecast.ifBlank { "—" } +
-                                                " · واقعی: " + event.actual.ifBlank { "—" },
+                                            NewsLocalization.label("previous", settings.language) + ": " + event.previous.ifBlank { "—" } +
+                                                " · " + NewsLocalization.label("forecast", settings.language) + ": " + event.forecast.ifBlank { "—" } +
+                                                " · " + NewsLocalization.label("actual", settings.language) + ": " + event.actual.ifBlank { "—" },
                                             color = Tx.Muted,
                                             fontSize = 9.sp,
                                             maxLines = 2,
@@ -391,11 +414,21 @@ fun CalendarScreen(nav: NavController) {
                                         "یادآور",
                                         tint = if (hasReminder) Tx.Gold else Tx.Muted,
                                         modifier = Modifier.size(22.dp).clickable {
-                                            val ok = com.tradenex.app.reminders.ReminderScheduler.scheduleNews(
-                                                context, event.id, event.title, event.currency, event.timestampMillis, !hasReminder,
-                                            )
-                                            if (ok) remind = if (hasReminder) remind - event.id else remind + event.id
-                                            else android.widget.Toast.makeText(context, "زمان این خبر (منهای ۱۵ دقیقه) گذشته است.", android.widget.Toast.LENGTH_SHORT).show()
+                                            if (hasReminder) {
+                                                NexNotify.cancelNewsReminder(context, event.id)
+                                                val updated = remind - event.id
+                                                remind = updated
+                                                reminderPrefs.edit().putStringSet("ids", updated.map(Int::toString).toSet()).apply()
+                                            } else {
+                                                val scheduled = NexNotify.scheduleNewsReminder(context, event.id, event.title, event.currency, event.timestampMillis)
+                                                if (scheduled) {
+                                                    val updated = remind + event.id
+                                                    remind = updated
+                                                    reminderPrefs.edit().putStringSet("ids", updated.map(Int::toString).toSet()).apply()
+                                                } else {
+                                                    newsMessage = "زمان این خبر گذشته است؛ فقط برای خبرهای آینده می‌توان یادآور گذاشت."
+                                                }
+                                            }
                                         },
                                     )
                                 }
@@ -413,6 +446,39 @@ fun CalendarScreen(nav: NavController) {
         }
         Spacer(Modifier.height(12.dp))
     }
+
+    selectedNewsEvent?.let { event ->
+        val language = AppState.settings.language
+        val local = Instant.ofEpochMilli(event.timestampMillis).atZone(ZoneId.systemDefault())
+        AlertDialog(
+            onDismissRequest = { selectedNewsEvent = null },
+            containerColor = Tx.Dialog,
+            title = { Text(NewsLocalization.title(event.title, language), color = Tx.Text, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(NewsLocalization.label("currency", language) + ": " + event.currency, color = Tx.Text)
+                    Text(NewsLocalization.label("time", language) + ": " + local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US)), color = Tx.Muted)
+                    Text(NewsLocalization.impact(event.impact, language), color = when (event.impact) { 2 -> Tx.Red; 1 -> Tx.Gold; else -> Tx.Muted })
+                    Text(NewsLocalization.label("previous", language) + ": " + event.previous.ifBlank { "—" }, color = Tx.Muted)
+                    Text(NewsLocalization.label("forecast", language) + ": " + event.forecast.ifBlank { "—" }, color = Tx.Muted)
+                    Text(NewsLocalization.label("actual", language) + ": " + event.actual.ifBlank { "—" }, color = Tx.Muted)
+                    Text(
+                        if (language == 0) "جزئیات بالا تمام فیلدهایی است که فید عمومی این رویداد ارائه می‌کند؛ این فید متن تحلیلی یا مقاله کامل خبر را منتشر نمی‌کند."
+                        else "The public feed exposes the fields above; it does not provide a full article or narrative analysis for this event.",
+                        color = Tx.Muted,
+                        fontSize = 10.sp,
+                    )
+                    Text(NewsLocalization.label("source", language) + ": Forex Factory", color = Tx.Gold, fontSize = 10.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedNewsEvent = null }) {
+                    Text(if (language == 0) "بستن" else "Close", color = Tx.Gold)
+                }
+            },
+        )
+    }
+
 }
 
 @Composable

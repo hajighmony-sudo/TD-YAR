@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.tradenex.app.data.Analytics
 import com.tradenex.app.data.AppState
+import com.tradenex.app.notifications.NexNotify
 import com.tradenex.app.data.JalaliCalendar
 import com.tradenex.app.data.Trade
 import com.tradenex.app.domain.FxInstrument
@@ -80,17 +82,23 @@ private fun stepLot(v: Double, dir: Int): Double {
 fun AddTradeScreen(nav: NavController) {
     val settings = AppState.settings
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     var buy by remember { mutableStateOf(true) }
-    var symbol by remember { mutableStateOf("EURUSD") }
-    var lot by remember { mutableStateOf(settings.defaultLot) }
+    var sideChosen by remember { mutableStateOf(false) }
+    var symbol by remember { mutableStateOf("") }
+    var lot by remember { mutableStateOf(settings.defaultLot.coerceAtLeast(0.0)) }
+    var lotText by remember { mutableStateOf(if (settings.defaultLot > 0.0) String.format(java.util.Locale.US, "%.2f", settings.defaultLot) else "") }
     var win by remember { mutableStateOf(true) }
-    var amount by remember { mutableStateOf(250.0) }
+    var amount by remember { mutableStateOf(0.0) }
+    var amountText by remember { mutableStateOf("") }
+    var resultChosen by remember { mutableStateOf(false) }
+    var saveMessage by remember { mutableStateOf("") }
     var usePriceCalculation by remember { mutableStateOf(false) }
     var entryText by remember { mutableStateOf("") }
     var exitText by remember { mutableStateOf("") }
-    var conversionText by remember { mutableStateOf(if (symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else "") }
+    var conversionText by remember { mutableStateOf(if (AppState.selectedAccount.baseCurrency.isNotBlank() && symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else "") }
     LaunchedEffect(symbol, AppState.selectedAccountId) {
-        conversionText = if (symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else ""
+        conversionText = if (AppState.selectedAccount.baseCurrency.isNotBlank() && symbol.endsWith(AppState.selectedAccount.baseCurrency)) "1.0" else ""
     }
     var commissionText by remember { mutableStateOf("0") }
     var swapText by remember { mutableStateOf("0") }
@@ -99,16 +107,16 @@ fun AddTradeScreen(nav: NavController) {
     var takeProfitText by remember { mutableStateOf("") }
     var notesText by remember { mutableStateOf("") }
     var tradeNameText by remember { mutableStateOf("") }
-    var tradeDateText by remember { mutableStateOf(LocalDate.now().toString()) }
-    var tradeTimeText by remember { mutableStateOf(java.time.LocalTime.now().withSecond(0).withNano(0).toString()) }
+    var tradeDateText by remember { mutableStateOf("") }
+    var tradeTimeText by remember { mutableStateOf("") }
     var timeframe by remember { mutableStateOf("") }
     var marketCondition by remember { mutableStateOf("") }
     var plannedRiskText by remember { mutableStateOf("") }
     val parsedTradeDate = remember(tradeDateText) { JalaliCalendar.parseDateInput(tradeDateText) }
     val parsedTradeTime = remember(tradeTimeText) { runCatching { java.time.LocalTime.parse(tradeTimeText.trim()) }.getOrNull() }
-    var strategy by remember { mutableStateOf(AppState.strategies.firstOrNull { it.active }?.name ?: "") }
+    var strategy by remember { mutableStateOf("") }
     var strategyFollowed by remember { mutableStateOf<Boolean?>(null) }
-    var emotion by remember { mutableStateOf("آرام") }
+    var emotion by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf(setOf<String>()) }
 
     val standardFxSymbol = remember(symbol) { runCatching { FxInstrument.standard(symbol) }.isSuccess }
@@ -129,17 +137,32 @@ fun AddTradeScreen(nav: NavController) {
             )
         }.getOrNull()
     }
-    val signed = if (usePriceCalculation) priceResult?.netAccountCurrency?.toDouble() ?: 0.0 else if (win) amount else -amount
+    val signed = if (usePriceCalculation) priceResult?.netAccountCurrency?.toDouble() ?: 0.0 else if (!resultChosen) 0.0 else if (win) amount else -amount
     val animated by animateFloatAsState(signed.toFloat(), tween(450), label = "net")
     val resColor = if (signed >= 0.0) Tx.Green else Tx.Red
     val riskUsd = AppState.selectedAccount.startingBalance * settings.riskPercent / 100.0
     val overRisk = if (usePriceCalculation) signed < -riskUsd else !win && amount > riskUsd
+    val existingToday = AppState.visibleTrades.filter { it.epochDay == parsedTradeDate?.toEpochDay() }
+    val realizedLossToday = existingToday.sumOf { if (it.pnl < 0.0) -it.pnl else 0.0 }
+    val dailyLossLimitCash = AppState.selectedAccount.startingBalance * settings.dailyLossLimitPercent / 100.0
+    val projectedDailyLoss = realizedLossToday + if (signed < 0.0) -signed else 0.0
+    val exceedsDailyLoss = projectedDailyLoss > dailyLossLimitCash
+    val exceedsTradeCount = existingToday.size >= settings.maxTradesPerDay
 
     Page(title = "ثبت معامله", onBack = { nav.popBackStack() }) {
+        if (AppState.accounts.none { !it.archived }) {
+            GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("ابتدا حساب خودت را ثبت کن", color = Tx.Gold, fontWeight = FontWeight.ExtraBold)
+                    Text("تا زمانی که حساب و ارز پایه را وارد نکنی، معامله‌ای با موجودی فرضی ثبت نمی‌شود.", color = Tx.Muted, fontSize = 11.sp)
+                    GoldButton("رفتن به بخش حساب‌ها") { nav.navigate("accounts") }
+                }
+            }
+        }
         Reveal(0) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SideButton("خرید (Buy)", true, buy, Tx.Green, Modifier.weight(1f)) { buy = true }
-                SideButton("فروش (Sell)", false, !buy, Tx.Red, Modifier.weight(1f)) { buy = false }
+                SideButton("خرید (Buy)", true, sideChosen && buy, Tx.Green, Modifier.weight(1f)) { buy = true; sideChosen = true }
+                SideButton("فروش (Sell)", false, sideChosen && !buy, Tx.Red, Modifier.weight(1f)) { buy = false; sideChosen = true }
             }
         }
         Reveal(1) {
@@ -160,14 +183,18 @@ fun AddTradeScreen(nav: NavController) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("حجم معامله (لات)", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.fillMaxWidth())
+                    TxField(lotText, { value ->
+                        lotText = value
+                        lot = value.trim().replace(",", ".").toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+                    }, "حجم لات را تایپ کن")
                     Stepper(
                         valueText = String.format(java.util.Locale.US, "%.2f", lot),
-                        onMinus = { lot = stepLot(lot, -1) },
-                        onPlus = { lot = stepLot(lot, 1) },
+                        onMinus = { lot = stepLot(lot, -1); lotText = String.format(java.util.Locale.US, "%.2f", lot) },
+                        onPlus = { lot = stepLot(lot, 1); lotText = String.format(java.util.Locale.US, "%.2f", lot) },
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        lotPresets.forEach { TxChip(it.toString(), lot == it, { lot = it }) }
+                        lotPresets.forEach { TxChip(it.toString(), lot == it, { lot = it; lotText = String.format(java.util.Locale.US, "%.2f", it) }) }
                     }
                     Text("تاریخ معامله", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.fillMaxWidth())
                     TxField(tradeDateText, { tradeDateText = it }, "میلادی YYYY-MM-DD یا شمسی 1405/08/17")
@@ -175,7 +202,7 @@ fun AddTradeScreen(nav: NavController) {
                         Text("تاریخ شمسی: " + jalaliText(parsedTradeDate), color = Tx.Gold, fontSize = 10.sp)
                     }
                     Text("ساعت بازشدن معامله", color = Tx.Muted, fontSize = 11.sp)
-                    TxField(tradeTimeText, { tradeTimeText = it }, "HH:mm")
+                    TxField(tradeTimeText, { tradeTimeText = it }, "ساعت معامله را وارد کن؛ HH:mm")
                     Text("نام معامله یا ستاپ (اختیاری)", color = Tx.Muted, fontSize = 11.sp)
                     TxField(tradeNameText, { tradeNameText = it }, "مثلاً London Breakout · ستاپ ICT")
                 }
@@ -226,25 +253,29 @@ fun AddTradeScreen(nav: NavController) {
                 Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (!usePriceCalculation) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ResultToggle("سود (Profit)", win, Tx.Green, Modifier.weight(1f)) { win = true }
-                            ResultToggle("ضرر (Loss)", !win, Tx.Red, Modifier.weight(1f)) { win = false }
+                            ResultToggle("سود (Profit)", resultChosen && win, Tx.Green, Modifier.weight(1f)) { win = true; resultChosen = true }
+                            ResultToggle("ضرر (Loss)", resultChosen && !win, Tx.Red, Modifier.weight(1f)) { win = false; resultChosen = true }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     if (!usePriceCalculation) {
+                        TxField(amountText, { value ->
+                            amountText = value
+                            amount = value.trim().replace(",", ".").toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+                        }, "مبلغ سود یا ضرر را تایپ کن")
                         Stepper(
                             valueText = AppState.selectedAccount.baseCurrency + " " + String.format(java.util.Locale.US, "%,.2f", amount),
-                            onMinus = { amount = (amount - 10).coerceAtLeast(0.0) },
-                            onPlus = { amount += 10 },
+                            onMinus = { amount = (amount - 10).coerceAtLeast(0.0); amountText = if (amount == 0.0) "" else String.format(java.util.Locale.US, "%.2f", amount) },
+                            onPlus = { amount += 10; amountText = String.format(java.util.Locale.US, "%.2f", amount) },
                             valueColor = resColor,
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             amountPresets.forEach { p ->
-                                TxChip("+${p.toInt()}", false, { amount += p })
+                                TxChip("+${p.toInt()}", false, { amount += p; amountText = String.format(java.util.Locale.US, "%.2f", amount) })
                             }
                         }
-                        Text("تغییر مبلغ دستی: هر بار ۱۰ واحد", color = Tx.Muted, fontSize = 10.sp)
+                        Text("مبلغ را می‌توانی مستقیم تایپ کنی یا با کنترل‌ها تغییر بدهی.", color = Tx.Muted, fontSize = 10.sp)
                     }
                 }
             }
@@ -301,6 +332,22 @@ fun AddTradeScreen(nav: NavController) {
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
+        if (exceedsDailyLoss) {
+            Text(
+                "هشدار سقف ضرر روزانه: ضرر ثبت‌شده به‌همراه این نتیجه حدود ${String.format(java.util.Locale.US, "%.2f", projectedDailyLoss)} است؛ سقف تنظیم‌شده ${settings.dailyLossLimitPercent}٪ بالانس است.",
+                color = Tx.Red,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+        if (exceedsTradeCount) {
+            Text(
+                "هشدار تعداد معاملات: امروز ${existingToday.size} معامله ثبت شده و سقف شخصی تو ${settings.maxTradesPerDay} معامله است.",
+                color = Tx.Gold,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
         Reveal(6) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("استراتژی", color = Tx.Muted, fontSize = 11.sp)
@@ -339,40 +386,56 @@ fun AddTradeScreen(nav: NavController) {
             TxField(notesText, { notesText = it }, "یادداشت معامله (اختیاری)")
             if (parsedTradeDate == null) Text("تاریخ باید با قالب YYYY-MM-DD وارد شود.", color = Tx.Red, fontSize = 11.sp)
             if (parsedTradeTime == null) Text("ساعت باید با قالب HH:mm وارد شود.", color = Tx.Red, fontSize = 11.sp)
+            if (saveMessage.isNotBlank()) Text(saveMessage, color = Tx.Red, fontSize = 11.sp)
             GoldButton("ذخیره معامله در دفترچه") {
-                if (symbol.isNotBlank() && parsedTradeDate != null && parsedTradeTime != null && (!usePriceCalculation || priceResult != null)) {
-                    AppState.addTrade(
-                    Trade(
-                        id = System.currentTimeMillis(),
-                        symbol = symbol,
-                        buy = buy,
-                        lot = lot,
-                        pnl = signed,
-                        strategy = strategy,
-                        strategyVersion = AppState.strategies.firstOrNull { it.name == strategy }?.version ?: 1,
-                        tags = tags.toList(),
-                        epochDay = parsedTradeDate.toEpochDay(),
-                        emotion = emotion,
-                        accountId = AppState.selectedAccountId,
-                        openedAtMillis = parsedTradeDate.atTime(parsedTradeTime).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                        closedAtMillis = parsedTradeDate.atTime(23, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                        entryPrice = entryText.trim().toDoubleOrNull(),
-                        exitPrice = exitText.trim().toDoubleOrNull(),
-                        commission = commissionText.trim().toDoubleOrNull() ?: 0.0,
-                        swap = swapText.trim().toDoubleOrNull() ?: 0.0,
-                        otherFees = feeText.trim().toDoubleOrNull() ?: 0.0,
-                        stopLossPrice = stopLossText.trim().toDoubleOrNull(),
-                        takeProfitPrice = takeProfitText.trim().toDoubleOrNull(),
-                        notes = notesText.trim(),
-                        plannedRisk = plannedRiskText.trim().toDoubleOrNull(),
-                        timeframe = timeframe,
-                        marketCondition = marketCondition,
-                        strategyFollowed = strategyFollowed,
-                        tradeName = tradeNameText.trim(),
-                    ),
-                    )
-                    if (settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    nav.popBackStack()
+                when {
+                    AppState.accounts.none { !it.archived } -> saveMessage = "ابتدا حساب معاملاتی خودت را ایجاد کن."
+                    !sideChosen -> saveMessage = "جهت معامله (خرید یا فروش) را انتخاب کن."
+                    symbol.isBlank() -> saveMessage = "نماد یا نام دارایی را وارد کن."
+                    lot <= 0.0 || !lot.isFinite() -> saveMessage = "حجم معامله را وارد کن."
+                    parsedTradeDate == null -> saveMessage = "تاریخ معامله معتبر نیست."
+                    parsedTradeTime == null -> saveMessage = "ساعت معامله معتبر نیست."
+                    usePriceCalculation && priceResult == null -> saveMessage = "قیمت ورود، خروج و نرخ تبدیل را کامل و معتبر وارد کن."
+                    !usePriceCalculation && (!resultChosen || amount <= 0.0) -> saveMessage = "نوع نتیجه و مبلغ سود یا ضرر را مشخص کن."
+                    else -> {
+                        val saved = runCatching {
+                            AppState.addTrade(
+                                Trade(
+                                    id = System.currentTimeMillis(),
+                                    symbol = symbol,
+                                    buy = buy,
+                                    lot = lot,
+                                    pnl = signed,
+                                    strategy = strategy,
+                                    strategyVersion = AppState.strategies.firstOrNull { it.name == strategy }?.version ?: 1,
+                                    tags = tags.toList(),
+                                    epochDay = parsedTradeDate.toEpochDay(),
+                                    emotion = emotion,
+                                    accountId = AppState.selectedAccountId,
+                                    openedAtMillis = parsedTradeDate.atTime(parsedTradeTime).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                                    closedAtMillis = parsedTradeDate.atTime(23, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                                    entryPrice = entryText.trim().toDoubleOrNull(),
+                                    exitPrice = exitText.trim().toDoubleOrNull(),
+                                    commission = commissionText.trim().toDoubleOrNull() ?: 0.0,
+                                    swap = swapText.trim().toDoubleOrNull() ?: 0.0,
+                                    otherFees = feeText.trim().toDoubleOrNull() ?: 0.0,
+                                    stopLossPrice = stopLossText.trim().toDoubleOrNull(),
+                                    takeProfitPrice = takeProfitText.trim().toDoubleOrNull(),
+                                    notes = notesText.trim(),
+                                    plannedRisk = plannedRiskText.trim().toDoubleOrNull(),
+                                    timeframe = timeframe,
+                                    marketCondition = marketCondition,
+                                    strategyFollowed = strategyFollowed,
+                                    tradeName = tradeNameText.trim(),
+                                ),
+                            )
+                        }
+                        saved.onSuccess {
+                            NexNotify.tradeLogged(context, symbol)
+                            if (settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            nav.popBackStack()
+                        }.onFailure { saveMessage = it.message ?: "ثبت معامله انجام نشد." }
+                    }
                 }
             }
         }

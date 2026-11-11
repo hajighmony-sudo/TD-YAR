@@ -86,12 +86,29 @@ fun SessionsScreen(nav: NavController) {
             }
         }
         Reveal(1) {
-            Text(
-                "ساعت‌ها به وقت $zoneName · اکنون ${SessionEngine.clock(nowLocal)}",
-                color = Tx.Muted,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(
+                    "ساعت‌ها به وقت $zoneName · اکنون ${SessionEngine.clock(nowLocal)}",
+                    color = Tx.Muted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                Text("منطقه زمانی نمایش", color = Tx.Text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TxChip("محلی", settings.tzMode == 2, {
+                        AppState.settings = AppState.settings.copy(tzMode = 2)
+                        AppState.persist()
+                    })
+                    TxChip("تهران", settings.tzMode == 0, {
+                        AppState.settings = AppState.settings.copy(tzMode = 0)
+                        AppState.persist()
+                    })
+                    TxChip("UTC", settings.tzMode == 1, {
+                        AppState.settings = AppState.settings.copy(tzMode = 1)
+                        AppState.persist()
+                    })
+                }
+            }
         }
         Reveal(2) {
             GlassCard(Modifier.fillMaxWidth()) {

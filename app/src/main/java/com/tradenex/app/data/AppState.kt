@@ -18,7 +18,7 @@ data class Trade(
     val tags: List<String>,
     val epochDay: Long,
     val emotion: String,
-    val accountId: String = "default",
+    val accountId: String = "",
     val openedAtMillis: Long = 0L,
     val closedAtMillis: Long = 0L,
     val entryPrice: Double? = null,
@@ -47,7 +47,22 @@ data class TradingAccount(
     val archived: Boolean = false,
 )
 
-data class Strategy(val id: Long, val name: String, val rules: List<String>, val active: Boolean, val version: Int = 1)
+data class StrategyAttachment(
+    val id: Long,
+    val uri: String,
+    val mimeType: String,
+    val displayName: String,
+    val sizeBytes: Long = 0L,
+)
+
+data class Strategy(
+    val id: Long,
+    val name: String,
+    val rules: List<String>,
+    val active: Boolean,
+    val version: Int = 1,
+    val attachments: List<StrategyAttachment> = emptyList(),
+)
 
 data class StrategyRevision(
     val id: Long,
@@ -56,6 +71,7 @@ data class StrategyRevision(
     val name: String,
     val rules: List<String>,
     val createdAt: Long,
+    val attachments: List<StrategyAttachment> = emptyList(),
 )
 
 enum class ContentKind(val label: String) {
@@ -70,6 +86,34 @@ enum class ContentKind(val label: String) {
 
 data class Lesson(val id: Long, val title: String, val kind: ContentKind, val progress: Float)
 
+data class PositionFill(
+    val id: Long,
+    val volume: Double,
+    val price: Double,
+    val realizedPnl: Double = 0.0,
+    val atMillis: Long = System.currentTimeMillis(),
+)
+
+data class JournalPosition(
+    val id: Long,
+    val accountId: String,
+    val symbol: String,
+    val buy: Boolean,
+    val strategy: String,
+    val entryFills: List<PositionFill>,
+    val exitFills: List<PositionFill> = emptyList(),
+    val notes: String = "",
+    val openedAtMillis: Long = System.currentTimeMillis(),
+) {
+    val enteredVolume: Double get() = entryFills.sumOf { it.volume }
+    val exitedVolume: Double get() = exitFills.sumOf { it.volume }
+    val openVolume: Double get() = (enteredVolume - exitedVolume).coerceAtLeast(0.0)
+    val averageEntry: Double get() = if (enteredVolume <= 0.0) 0.0 else entryFills.sumOf { it.volume * it.price } / enteredVolume
+    val averageExit: Double get() = if (exitedVolume <= 0.0) 0.0 else exitFills.sumOf { it.volume * it.price } / exitedVolume
+    val realizedPnl: Double get() = exitFills.sumOf { it.realizedPnl }
+    val isClosed: Boolean get() = openVolume <= 1e-8
+}
+
 data class AppSettings(
     val language: Int = 0,
     val showGlobe: Boolean = true,
@@ -77,9 +121,11 @@ data class AppSettings(
     val reminderOn: Boolean = true,
     val reminderHour: Int = 22,
     val newsImpact: Int = 0,
-    val startBalance: Double = 10_000.0,
-    val defaultLot: Double = 0.10,
+    val startBalance: Double = 0.0,
+    val defaultLot: Double = 0.0,
     val riskPercent: Double = 1.0,
+    val dailyLossLimitPercent: Double = 3.0,
+    val maxTradesPerDay: Int = 5,
     val haptics: Boolean = true,
     val animations: Int = 1,
     val accent: Int = 0,
@@ -95,14 +141,14 @@ data class AppSettings(
 
 object AppState {
     val trades = mutableStateListOf<Trade>()
-    val accounts = mutableStateListOf(
-        TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10_000.0),
-    )
-    var selectedAccountId by mutableStateOf("default")
+    val positions = mutableStateListOf<JournalPosition>()
+    // No synthetic account or starting balance is created. The user creates and configures every account.
+    val accounts = mutableStateListOf<TradingAccount>()
+    var selectedAccountId by mutableStateOf("")
     val selectedAccount: TradingAccount
         get() = accounts.firstOrNull { it.id == selectedAccountId && !it.archived }
             ?: accounts.firstOrNull { !it.archived }
-            ?: TradingAccount("default", "حساب اصلی", "", "REAL", "USD", 10_000.0)
+            ?: TradingAccount("", "حساب ثبت‌نشده", "", "", "", 0.0)
     val visibleTrades: List<Trade>
         get() = trades.filter { it.accountId == selectedAccountId }
     // User-created content only: no preloaded strategy templates or sample records.
@@ -123,7 +169,7 @@ object AppState {
         val snapshot = localStore?.readSnapshot()
         if (snapshot != null) {
             val target = MutableSnapshot(
-                trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
+                trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
                 selectedAccountId, txAiEpisodeReviews, txAiInsightPins,
             )
             SnapshotCodec.restore(snapshot, target)
@@ -134,7 +180,7 @@ object AppState {
 
     fun persist() {
         val payload = SnapshotCodec.encode(
-            trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
+            trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
             txAiEpisodeReviews, txAiInsightPins,
         )
         localStore?.writeSnapshot(payload)
@@ -144,7 +190,8 @@ object AppState {
 
     /** Bulk add (CSV import): one persist for the whole batch. Invalid rows are skipped; returns how many were added. */
     fun addTrades(list: List<Trade>): Int {
-        val ok = list.filter { it.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}")) && it.lot > 0.0 && it.pnl.isFinite() }
+        val validAccountIds = accounts.filterNot { it.archived }.map { it.id }.toSet()
+        val ok = list.filter { it.accountId in validAccountIds && it.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}")) && it.lot > 0.0 && it.pnl.isFinite() }
         if (ok.isEmpty()) return 0
         trades.addAll(ok)
         persist()
@@ -152,11 +199,74 @@ object AppState {
     }
 
     fun addTrade(t: Trade) {
+        require(t.accountId.isNotBlank() && accounts.any { it.id == t.accountId && !it.archived }) {
+            "ابتدا حساب معاملاتی خودت را در بخش حساب‌ها ثبت و انتخاب کن."
+        }
         require(t.symbol.trim().matches(Regex("[\\p{L}\\p{N}._/-]{1,24}"))) {
             "Trade symbol must contain 1-24 letters, digits, dots, underscores, slashes or hyphens."
         }
         require(t.lot > 0.0 && t.pnl.isFinite()) { "Trade volume and P&L must be valid." }
         trades.add(t)
+        persist()
+    }
+
+    fun addPosition(position: JournalPosition) {
+        require(position.accountId.isNotBlank() && accounts.any { it.id == position.accountId && !it.archived }) {
+            "ابتدا حساب معاملاتی خودت را در بخش حساب‌ها ثبت و انتخاب کن."
+        }
+        require(position.symbol.isNotBlank() && position.entryFills.isNotEmpty())
+        require(position.entryFills.all { it.volume > 0.0 && it.price > 0.0 && it.volume.isFinite() && it.price.isFinite() })
+        positions.add(position)
+        persist()
+    }
+
+    fun addPositionEntry(positionId: Long, fill: PositionFill) {
+        require(fill.volume > 0.0 && fill.price > 0.0 && fill.volume.isFinite() && fill.price.isFinite())
+        val index = positions.indexOfFirst { it.id == positionId }
+        if (index < 0) return
+        val current = positions[index]
+        require(!current.isClosed) { "Closed positions cannot be reopened." }
+        positions[index] = current.copy(entryFills = current.entryFills + fill)
+        persist()
+    }
+
+    fun addPositionExit(positionId: Long, fill: PositionFill) {
+        require(fill.volume > 0.0 && fill.price > 0.0 && fill.volume.isFinite() && fill.price.isFinite() && fill.realizedPnl.isFinite())
+        val index = positions.indexOfFirst { it.id == positionId }
+        if (index < 0) return
+        val current = positions[index]
+        require(!current.isClosed && fill.volume <= current.openVolume + 1e-8) { "Exit volume exceeds the open position volume." }
+        val updated = current.copy(exitFills = current.exitFills + fill)
+        positions[index] = updated
+        if (updated.isClosed && trades.none { it.id == updated.id }) {
+            val closedAt = updated.exitFills.maxOfOrNull { it.atMillis } ?: System.currentTimeMillis()
+            val closeDate = java.time.Instant.ofEpochMilli(closedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            trades.add(
+                Trade(
+                    id = updated.id,
+                    symbol = updated.symbol,
+                    buy = updated.buy,
+                    lot = updated.exitedVolume,
+                    pnl = updated.realizedPnl,
+                    strategy = updated.strategy,
+                    tags = emptyList(),
+                    epochDay = closeDate.toEpochDay(),
+                    emotion = "",
+                    accountId = updated.accountId,
+                    openedAtMillis = updated.openedAtMillis,
+                    closedAtMillis = closedAt,
+                    entryPrice = updated.averageEntry,
+                    exitPrice = updated.averageExit,
+                    notes = updated.notes,
+                    tradeName = "پوزیشن تکمیل‌شده",
+                ),
+            )
+        }
+        persist()
+    }
+
+    fun deletePosition(positionId: Long) {
+        positions.removeAll { it.id == positionId }
         persist()
     }
 
@@ -233,7 +343,7 @@ object AppState {
     }
 
     fun exportSnapshotJson(): String = SnapshotCodec.encode(
-        trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
+        trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings, selectedAccountId,
         txAiEpisodeReviews, txAiInsightPins,
     ).toString(2)
 
@@ -241,7 +351,7 @@ object AppState {
         val snapshot = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return false
         if (snapshot.optInt("version", 0) != 1) return false
         val target = MutableSnapshot(
-            trades, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
+            trades, positions, accounts, strategies, strategyRevisions, hashtags, lessons, settings,
             selectedAccountId, txAiEpisodeReviews, txAiInsightPins,
         )
         SnapshotCodec.restore(snapshot, target)

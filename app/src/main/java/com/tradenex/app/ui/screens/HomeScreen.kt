@@ -85,7 +85,9 @@ fun HomeScreen(nav: NavController) {
     val monthPct = monthPnl / accountStartBalance * 100
     val grossWin = visibleTrades.filter { it.pnl > 0 }.sumOf { it.pnl }
     val grossLoss = visibleTrades.filter { it.pnl < 0 }.sumOf { it.pnl }
-    val todayCount = visibleTrades.count { it.epochDay == today }
+    val todayTrades = visibleTrades.filter { it.epochDay == today }
+    val todayCount = todayTrades.size
+    val todayPnl = todayTrades.sumOf { it.pnl }
     // null = «لحظه‌ای»: one candle per recorded trade; otherwise one candle per day / week / Jalali month / year.
     var period by remember { mutableStateOf<Period?>(null) }
 
@@ -118,15 +120,24 @@ fun HomeScreen(nav: NavController) {
                         brush = Brush.verticalGradient(listOf(Tx.GoldPale, Color(0xFFE7A92B))),
                     ),
                 )
-                Text("Trade · Journal · Analyze · Improve", color = Tx.Muted, fontSize = 9.sp)
+                Text("حساب: ${AppState.selectedAccount.name.ifBlank { "ثبت‌نشده" }} · ${tradeCount} معامله", color = Tx.Muted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { nav.navigate("accounts") })
             }
-            RoundBtn(Icons.Rounded.Notifications, "اعلان‌ها") { nav.navigate("settings") }
+            RoundBtn(Icons.Rounded.Notifications, "اعلان‌ها") { nav.navigate("notifications") }
         }
 
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (AppState.accounts.none { !it.archived }) {
+                GlassCard(Modifier.fillMaxWidth().clickable { nav.navigate("accounts") }, border = Tx.Gold.copy(alpha = 0.5f)) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("شروع با اطلاعات واقعی خودت", color = Tx.Gold, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("هنوز حسابی ثبت نشده است. حساب، ارز پایه و بالانس اولیه را خودت وارد کن تا نمودارها و گزارش‌ها بر اساس داده‌های واقعی ژورنالت ساخته شوند.", color = Tx.Muted, fontSize = 11.sp)
+                        Text("برای ساخت حساب لمس کن ←", color = Tx.Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
             Reveal(0) {
                 GlassCard(Modifier.fillMaxWidth().height(140.dp)) {
                     Canvas(Modifier.fillMaxSize()) {
@@ -172,6 +183,10 @@ fun HomeScreen(nav: NavController) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatTile("مجموع سود", if (settings.hideBalance) "•••" else "+%,.0f".format(grossWin), Tx.Green, Modifier.weight(1f))
                         StatTile("مجموع ضرر", if (settings.hideBalance) "•••" else "%,.0f".format(grossLoss), Tx.Red, Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatTile("معاملات امروز", todayCount.toString(), Tx.Blue, Modifier.weight(1f))
+                        StatTile("خالص امروز", if (settings.hideBalance) "•••" else Analytics.money(todayPnl), if (todayPnl >= 0) Tx.Green else Tx.Red, Modifier.weight(1f))
                     }
                 }
             }
