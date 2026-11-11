@@ -27,6 +27,9 @@ import androidx.navigation.NavController
 import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.components.TxChip
 import com.tradenex.app.ui.theme.Tx
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 private fun number(value: String): Double? = value.trim().replace(",", ".").toDoubleOrNull()?.takeIf { it.isFinite() }
@@ -167,6 +170,11 @@ private fun TetherCalculator() {
     var rate by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("100") }
     var fee by remember { mutableStateOf("0") }
+    var live by remember { mutableStateOf("") }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var buyP by remember { mutableStateOf("") }
+    var sellP by remember { mutableStateOf("") }
+    var tradeUsdt by remember { mutableStateOf("100") }
     val r = number(rate)
     val a = number(amount)
     val f = number(fee)
@@ -193,6 +201,17 @@ private fun TetherCalculator() {
                 TxChip("تومان ← تتر", direction == 1, { direction = 1 }, Modifier.weight(1f))
             }
             TxField(rate, { rate = it }, "نرخ هر ۱ تتر به تومان")
+            TxChip(if (live == "…") "در حال دریافت…" else "دریافت نرخ لحظه‌ای (نوبیتکس)", false, {
+                if (live != "…") {
+                    live = "…"
+                    scope.launch {
+                        val res = withContext(Dispatchers.IO) { runCatching { com.tradenex.app.data.UsdtPrice.latestToman() } }
+                        res.onSuccess { rate = String.format(Locale.US, "%.0f", it); live = "آخرین معامله نوبیتکس: " + String.format(Locale.US, "%,.0f", it) + " تومان" }
+                            .onFailure { live = "دریافت ممکن نشد؛ نرخ را دستی وارد کن." }
+                    }
+                }
+            })
+            if (live.isNotBlank() && live != "…") Text(live, color = Tx.Gold, fontSize = 11.sp)
             TxField(amount, { amount = it }, if (direction == 0) "مقدار تتر (USDT)" else "مبلغ تومان")
             TxField(fee, { fee = it }, "کارمزد فرضی (%)")
             Text("مقدارهای سریع", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -211,7 +230,22 @@ private fun TetherCalculator() {
                     }
                 }
             }
-            Text("نرخ را دستی وارد کن و پیش از استفاده، زمان به‌روزرسانی و اختلاف نرخ منابع مختلف را بررسی کن. این ابزار فقط تبدیل عددی انجام می‌دهد و نرخ زنده یا پیشنهاد خریدوفروش ارائه نمی‌کند.", color = Tx.Muted, fontSize = 10.sp)
+            Text("سود و زیان خرید ← فروش تتر", color = Tx.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TxField(buyP, { buyP = it }, "قیمت خرید", Modifier.weight(1f))
+                TxField(sellP, { sellP = it }, "قیمت فروش", Modifier.weight(1f))
+                TxField(tradeUsdt, { tradeUsdt = it }, "تتر", Modifier.weight(1f))
+            }
+            val bp = number(buyP); val sp = number(sellP); val tu = number(tradeUsdt)
+            if (bp != null && sp != null && tu != null && bp > 0 && f != null && f in 0.0..99.0) {
+                val rt = com.tradenex.app.core.TetherMath.roundTrip(tu, bp, sp, f)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ResultCell("سود / زیان", fmt(rt.profit) + " (" + String.format(Locale.US, "%+.2f", rt.profitPct) + "٪)", Modifier.weight(1f), if (rt.profit >= 0) Tx.Green else Tx.Red)
+                    ResultCell("قیمت فروش سربه‌سر", fmt(rt.breakEvenSell), Modifier.weight(1f))
+                }
+                Text("کارمزد بالا برای هر دو سمت خرید و فروش اعمال شده است.", color = Tx.Muted, fontSize = 10.sp)
+            }
+            Text("نرخ را دستی وارد کن و پیش از استفاده، زمان به‌روزرسانی و اختلاف نرخ منابع مختلف را بررسی کن. این ابزار فقط تبدیل عددی انجام می‌دهد و پیشنهاد خریدوفروش ارائه نمی‌کند؛ نرخ لحظه‌ای فقط با دکمه از نوبیتکس گرفته می‌شود و ممکن است با صرافی تو فرق داشته باشد.", color = Tx.Muted, fontSize = 10.sp)
             Text("الهام از نمایش قیمت، تغییرات و مبدل‌های تتر در منابع معرفی‌شده؛ بدون کپی‌کردن رابط یا داده‌ی آن‌ها.", color = Tx.Muted, fontSize = 10.sp)
         }
     }
