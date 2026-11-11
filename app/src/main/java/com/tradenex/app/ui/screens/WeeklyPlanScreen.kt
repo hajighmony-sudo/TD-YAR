@@ -126,6 +126,20 @@ fun WeeklyPlanScreen(nav: NavController, openToday: Boolean = false) {
             }
         }
 
+        if (recordedPlans.isNotEmpty()) {
+            Reveal(1) {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val nets = recordedPlans.map { it.totalProfit - it.totalLoss }
+                        val winDays = nets.count { it > 0 }
+                        SectionTitle("تحلیل روزهای ثبت‌شده", "${recordedPlans.size} روز")
+                        Text("روزهای سودده: $winDays از ${recordedPlans.size}", color = Tx.Text, fontSize = 12.sp)
+                        Text("بهترین روز: ${money(nets.max())}  ·  بدترین روز: ${money(nets.min())}", color = Tx.Muted, fontSize = 12.sp)
+                        Text("پایبندی به پلن: ${recordedPlans.count { it.followedPlan }} از ${recordedPlans.size} روز", color = Tx.Muted, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
         if (weekOffset == 0 && LocalDate.now().dayOfWeek.value in 6..7) {
             Reveal(2) {
                 GlassCard(Modifier.fillMaxWidth(), border = Tx.Green) {

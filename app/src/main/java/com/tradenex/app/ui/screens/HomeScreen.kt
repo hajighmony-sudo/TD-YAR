@@ -276,6 +276,14 @@ fun HomeScreen(nav: NavController) {
                         Quick("سشن‌ها", Icons.Rounded.Public, Modifier.weight(1f)) { nav.navigate("sessions") }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Quick("بینش‌ها", Icons.Rounded.BarChart, Modifier.weight(1f)) { nav.navigate("insights") }
+                        Quick("متاترید", Icons.Rounded.Public, Modifier.weight(1f)) { nav.navigate("metatrader") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Quick("آزمایشگاه ریسک", Icons.Rounded.TrackChanges, Modifier.weight(1f)) { nav.navigate("risk_lab") }
+                        Quick("ماشین حساب", Icons.Rounded.Add, Modifier.weight(1f)) { nav.navigate("calculator") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Quick("هشتگ‌ها", Icons.Rounded.Tag, Modifier.weight(1f)) { nav.navigate("tags") }
                         Quick("تنظیمات", Icons.Rounded.Settings, Modifier.weight(1f)) { nav.navigate("settings") }
                     }

@@ -74,6 +74,7 @@ import java.io.File
 fun EducationScreen(nav: NavController) {
     val context = LocalContext.current
     var filter by remember { mutableStateOf("همه") }
+    var query by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var creating by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Long?>(null) }
@@ -145,14 +146,14 @@ fun EducationScreen(nav: NavController) {
 
     val categories = listOf("همه", "متن", "عکس", "ویدیو", "فایل")
     val visible = EducationStore.lessons.filter { lesson ->
-        filter == "همه" || lesson.blocks.any { block ->
+        (query.isBlank() || lesson.title.contains(query.trim(), ignoreCase = true)) && (filter == "همه" || lesson.blocks.any { block ->
             when (filter) {
                 "متن" -> block.type == EducationBlockType.TEXT
                 "عکس" -> block.type == EducationBlockType.IMAGE
                 "ویدیو" -> block.type == EducationBlockType.VIDEO
                 else -> block.type == EducationBlockType.FILE
             }
-        }
+        })
     }
 
     Page(title = "آموزش و دانش", onBack = { nav.popBackStack() }) {
@@ -160,6 +161,8 @@ fun EducationScreen(nav: NavController) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionTitle("کتابخانه آموزشی", "درس‌ها، فایل‌ها و یادداشت‌های شخصی")
+                    TxField(query, { query = it }, "جست‌وجوی عنوان درس")
+                    Text("${EducationStore.lessons.size} درس · میانگین پیشرفت ${(EducationStore.lessons.map { it.progress }.average().takeIf { !it.isNaN() } ?: 0.0).times(100).toInt()}٪", color = Tx.Muted, fontSize = 10.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         categories.forEach { TxChip(it, filter == it, { filter = it }) }
                     }
