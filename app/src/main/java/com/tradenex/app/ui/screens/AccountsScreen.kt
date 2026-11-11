@@ -47,6 +47,7 @@ fun AccountsScreen(nav: NavController) {
     var formError by remember { mutableStateOf("") }
 
     Page(title = "حساب‌های معاملاتی", onBack = { nav.popBackStack() }) {
+        SectionHero("ACCOUNT VAULT / PROFILES", "مدیریت حساب‌ها", "حساب‌های شخصی، دمو و تمرینی را جدا نگه دار و گزارش‌ها را بر اساس حساب بررسی کن.", Tx.Blue)
         if (AppState.accounts.none { !it.archived }) {
             GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
