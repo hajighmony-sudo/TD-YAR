@@ -54,6 +54,7 @@ fun TxAiScreen(nav: NavController) {
     }
     fun money(v: Double) = Analytics.money(v)
     Page(title = "TX AI", onBack = { nav.popBackStack() }) {
+        SectionHero("TX AI / JOURNAL ASSISTANT", "دستیار مرور ژورنال", "برای خلاصه‌سازی داده‌های ثبت‌شده و پیدا کردن الگوهای شخصی از ابزارهای تحلیلی استفاده کن؛ نه سیگنال معاملاتی.", Tx.Purple)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
