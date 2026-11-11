@@ -93,6 +93,7 @@ fun PerformanceScreen(nav: NavController) {
     val coreLabel = if (NativeCore.isNative) "Rust" else "Kotlin"
 
     Page(title = "عملکرد من") {
+        SectionHero("PERFORMANCE / ANALYTICS", "داشبورد عملکرد معاملاتی", "روند سود و زیان، نرخ برد، افت سرمایه و الگوهای زمانی را از داده‌های ثبت‌شده بررسی کن.", Tx.Green)
         Reveal(0) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("لحظه‌ای", "روزانه", "هفتگی", "ماهانه", "سالانه").forEach { mode ->
