@@ -57,6 +57,7 @@ fun MetaTraderScreen(nav: NavController) {
     val importedCount = AppState.trades.count { "metatrader" in it.tags }
 
     Page(title = "مرکز اتصال متاتریدر", onBack = { nav.popBackStack() }) {
+        SectionHero("MT4 / MT5 / READ ONLY", "اتصال امن به متاتریدر", "تاریخچه و اطلاعات حساب را فقط‌خواندنی وارد کن؛ بدون دریافت رمز اصلی یا اجرای معامله.", Tx.Blue)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
