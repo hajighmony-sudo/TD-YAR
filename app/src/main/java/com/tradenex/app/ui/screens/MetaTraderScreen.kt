@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +30,8 @@ import com.tradenex.app.data.MetaTrader
 import com.tradenex.app.data.MtBridge
 import com.tradenex.app.data.TradeCsv
 import com.tradenex.app.ui.components.GlassCard
+import com.tradenex.app.ui.components.PulseDot
+import com.tradenex.app.ui.components.StatTile
 import com.tradenex.app.ui.components.GoldButton
 import com.tradenex.app.ui.components.SectionTitle
 import com.tradenex.app.ui.components.TxChip
@@ -50,16 +54,48 @@ fun MetaTraderScreen(nav: NavController) {
     val context = LocalContext.current
     var tab by remember { mutableStateOf(0) }
     val account = AppState.selectedAccount
+    val importedCount = AppState.trades.count { "metatrader" in it.tags }
 
-    Page(title = "متاترید", onBack = { nav.popBackStack() }) {
+    Page(title = "مرکز اتصال متاتریدر", onBack = { nav.popBackStack() }) {
         Reveal(0) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TxChip("پل مستقیم", tab == 0, { tab = 0 }, Modifier.weight(1f))
-                TxChip("گزارش MT4/MT5", tab == 1, { tab = 1 }, Modifier.weight(1f))
-                TxChip("MetaApi", tab == 2, { tab = 2 }, Modifier.weight(1f))
+            GlassCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("TRADIX CONNECT  /  MT4 • MT5", color = Tx.Gold, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("اتصال هوشمند به ژورنال", color = Tx.Text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("همگام‌سازی تاریخچه؛ بدون اجرای معامله", color = Tx.Muted, fontSize = 11.sp)
+                        }
+                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            PulseDot(if (tab == 0 && MtBridge.running) Tx.Green else Tx.Gold)
+                            Text(if (tab == 0 && MtBridge.running) "LIVE" else "READY", color = if (tab == 0 && MtBridge.running) Tx.Green else Tx.Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatTile("ورودی‌های MT", importedCount.toString(), Tx.Gold, Modifier.weight(1f), "ثبت‌شده در ژورنال")
+                        StatTile("حساب مقصد", account.name, Tx.Text, Modifier.weight(1f), "حساب انتخاب‌شده")
+                    }
+                }
             }
-            Text("اتصال فقط‌خواندنی است: صرفاً تاریخچه و معاملات بسته‌شده وارد ژورنال می‌شوند؛ هیچ سفارش خرید/فروش ثبت، باز، بسته یا ویرایش نمی‌شود.", color = Tx.Green, fontSize = 11.sp)
-            Text("معامله‌ها به حساب فعال «${account.name}» اضافه می‌شوند و با شماره‌ی تیکت تکراری ثبت نمی‌شوند.", color = Tx.Muted, fontSize = 11.sp)
+        }
+        Reveal(1) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    TxChip("پل مستقیم", tab == 0, { tab = 0 })
+                    TxChip("گزارش MT4/MT5", tab == 1, { tab = 1 })
+                    TxChip("اتصال ابری", tab == 2, { tab = 2 })
+                }
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("حالت فقط‌خواندنی فعال است", color = Tx.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("فقط تاریخچه و معاملات بسته‌شده به ژورنال منتقل می‌شوند. این بخش سفارش جدید ثبت نمی‌کند و سفارش‌های موجود را تغییر نمی‌دهد.", color = Tx.Muted, fontSize = 11.sp)
+                        Text("مقصد ورود: «${account.name}»  •  جلوگیری از ثبت تکراری با Ticket ID", color = Tx.Gold, fontSize = 10.sp)
+                    }
+                }
+            }
         }
         when (tab) {
             0 -> BridgeTab(context)
@@ -83,10 +119,17 @@ private fun BridgeTab(context: Context) {
     Reveal(1) {
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("اتصال مستقیم (بدون ابر)", if (running) "فعال" else "خاموش")
-                Text("یک Expert Advisor داخل متاتریدر معامله‌های بسته‌شده را مستقیم از طریق Wi-Fi به این برنامه می‌فرستد. گوشی و کامپیوتر باید در یک شبکه باشند و تا وقتی این صفحه باز است سرور روشن می‌ماند.", color = Tx.Muted, fontSize = 11.sp)
-                Text("آدرس برای EA:  http://${ip ?: "<IP گوشی>"}:${MtBridge.port}/deals", color = Tx.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text("توکن:  $token", color = Tx.Text, fontSize = 13.sp)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("LOCAL BRIDGE  •  WI-FI", color = Tx.Gold, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        SectionTitle("پل مستقیم گوشی و ترمینال", if (running) "متصل" else "آماده")
+                    }
+                    PulseDot(if (running) Tx.Green else Tx.Muted)
+                }
+                Text("Expert Advisor در ترمینال دسکتاپ، تاریخچه‌ی معاملات بسته‌شده را از طریق شبکه‌ی محلی به گوشی می‌فرستد. لازم نیست رمز اصلی حساب متاتریدر را داخل این اپ وارد کنی.", color = Tx.Muted, fontSize = 11.sp)
+                Text("نشانی دریافت", color = Tx.Muted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text("http://${ip ?: "<IP گوشی>"}:${MtBridge.port}/deals", color = Tx.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("کلید جفت‌سازی:  $token", color = Tx.Text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 if (ip == null) Text("به Wi-Fi وصل نیستی؛ آدرس IP پیدا نشد.", color = Tx.Red, fontSize = 11.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TxChip(if (running) "توقف سرور" else "شروع سرور", running, { if (running) MtBridge.stop() else MtBridge.start() })
@@ -174,8 +217,8 @@ private fun MetaApiTab(context: Context) {
     Reveal(1) {
         GlassCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("MetaApi (ابری)", "نیاز به حساب MetaApi")
-                Text("حساب MT4/MT5 خودت را در metaapi.cloud وصل کن، سپس توکن API و شناسه‌ی حساب را اینجا بگذار. بدون نصب چیزی روی کامپیوتر، تاریخچه‌ی معامله‌ها را می‌گیرد. توکن فقط روی همین گوشی ذخیره می‌شود؛ MetaApi سرویس شخص ثالث است و ممکن است هزینه یا محدودیت داشته باشد.", color = Tx.Muted, fontSize = 11.sp)
+                SectionTitle("اتصال ابری MetaApi", "سرویس شخص ثالث")
+                Text("این مسیر از توکن API و شناسه‌ی حساب MetaApi استفاده می‌کند؛ این توکن با رمز اصلی ورود به متاتریدر فرق دارد. اطلاعات ورود حساب متاتریدر را در این صفحه وارد نکن. MetaApi سرویس شخص ثالث است و ممکن است هزینه یا محدودیت داشته باشد.", color = Tx.Muted, fontSize = 11.sp)
                 TxField(token, { token = it }, "توکن API")
                 TxField(accountId, { accountId = it }, "شناسه‌ی حساب (Account ID)")
                 TxField(region, { region = it }, "منطقه (مثلاً new-york یا london)")
