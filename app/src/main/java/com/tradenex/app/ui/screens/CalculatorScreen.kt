@@ -64,6 +64,7 @@ fun CalculatorScreen(nav: NavController) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
             TxChip("فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
             TxChip("تتر USDT", mode == 2, { mode = 2 }, Modifier.weight(1f))
+            TxChip("رشد", mode == 3, { mode = 3 }, Modifier.weight(1f))
         }
         if (mode == 0) {
             GlassCard(Modifier.fillMaxWidth()) {
@@ -151,6 +152,8 @@ fun CalculatorScreen(nav: NavController) {
                     Text("برای نمادهای فلزات، شاخص‌ها، کریپتو و حساب‌های غیر USD، اندازه قرارداد و تبدیل ارز بروکر را جداگانه بررسی کن؛ مقدار pip value را از مشخصات همان نماد وارد کن.", color = Tx.Muted, fontSize = 10.sp)
                 }
             }
+        } else if (mode == 3) {
+            GrowthCalc()
         } else {
             TetherCalculator()
         }
