@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.tradenex.app.core.SessionEngine
 import com.tradenex.app.data.AppState
 import com.tradenex.app.ui.components.TxHeader
+import com.tradenex.app.ui.components.GlassCard
 import com.tradenex.app.ui.theme.Tx
 import kotlinx.coroutines.delay
 
@@ -63,6 +65,7 @@ fun Page(
 ) {
     Column(Modifier.fillMaxSize()) {
         TxHeader(title, onBack, trailing)
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Tx.Gold.copy(alpha = 0.28f)))
         Column(
             Modifier
                 .weight(1f)
@@ -71,6 +74,30 @@ fun Page(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content,
         )
+    }
+}
+
+
+/** Shared TRADIX identity panel used across feature screens. */
+@Composable
+fun SectionHero(eyebrow: String, title: String, subtitle: String, accent: Color = Tx.Gold) {
+    GlassCard(Modifier.fillMaxWidth(), border = accent.copy(alpha = 0.34f)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier.width(4.dp).height(54.dp)
+                    .background(accent, RoundedCornerShape(4.dp)),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(eyebrow.uppercase(), color = accent, fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                Text(title, color = Tx.Text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                Text(subtitle, color = Tx.Muted, fontSize = 10.sp, lineHeight = 15.sp)
+            }
+            Text("TX", color = accent.copy(alpha = 0.22f), fontSize = 25.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Black)
+        }
     }
 }
 

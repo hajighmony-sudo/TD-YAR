@@ -21,6 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -63,6 +66,7 @@ fun CalculatorScreen(nav: NavController) {
     val lot = if (riskCash != null && stopPips != null && pv != null && stopPips > 0.0 && pv > 0.0) riskCash / (stopPips * pv) else null
 
     Page(title = "ماشین حساب", onBack = { nav.popBackStack() }) {
+        SectionHero("CALCULATION DECK / TOOLS", "میز ابزار محاسباتی", "محاسبات عمومی، حجم، ریسک و تبدیل USDT را با ورودی‌های قابل‌کنترل انجام بده.", Tx.Blue)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
             TxChip("فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
@@ -166,6 +170,7 @@ fun CalculatorScreen(nav: NavController) {
 
 @Composable
 private fun TetherCalculator() {
+    val context = LocalContext.current
     var direction by remember { mutableStateOf(0) }
     var rate by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("100") }
@@ -214,6 +219,16 @@ private fun TetherCalculator() {
             if (live.isNotBlank() && live != "…") Text(live, color = Tx.Gold, fontSize = 11.sp)
             TxField(amount, { amount = it }, if (direction == 0) "مقدار تتر (USDT)" else "مبلغ تومان")
             TxField(fee, { fee = it }, "کارمزد فرضی (%)")
+            Text("منابع بررسی نرخ", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                TxChip("ارزدیجیتال", false, {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://arzdigital.com/coins/tether/")))
+                })
+                TxChip("تبدیل", false, {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tabdeal.org/usdt-price")))
+                })
+            }
+            Text("نرخ را از منبع دلخواه بررسی کن و در کادر بالا وارد کن.", color = Tx.Muted, fontSize = 10.sp)
             Text("مقدارهای سریع", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (if (direction == 0) listOf("10", "50", "100", "500") else listOf("1000000", "5000000", "10000000"))

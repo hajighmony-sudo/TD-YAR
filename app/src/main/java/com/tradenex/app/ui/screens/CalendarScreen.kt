@@ -130,6 +130,7 @@ fun CalendarScreen(nav: NavController) {
             TxChip("امروز", false, { offset = 0; selectedDate = today })
         }
     }) {
+        SectionHero("MARKET CALENDAR / PLANNER", "تقویم معاملاتی هوشمند", "روزهای معاملاتی، رویدادها، یادداشت‌ها و مرور عملکرد هر روز را در یک نما ببین.", Tx.Blue)
         Reveal(0) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TxChip("تقویم معامله‌ها", tab == 0, { tab = 0 }, Modifier.weight(1f))

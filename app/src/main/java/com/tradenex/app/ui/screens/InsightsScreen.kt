@@ -51,6 +51,7 @@ fun InsightsScreen(nav: NavController) {
     val s = Insights.streaks(trades)
 
     Page(title = "بینش‌ها", onBack = { nav.popBackStack() }) {
+        SectionHero("DATA INSIGHTS / PATTERNS", "کشف الگوهای عملکرد", "نتایج ثبت‌شده را بر اساس نماد، ساعت، روز و ویژگی‌های معاملاتی مرور کن.", Tx.Green)
         if (trades.isEmpty()) {
             Reveal(0) { Text("هنوز معامله‌ای در این حساب نیست. چند معامله ثبت یا وارد کن تا بینش‌ها ساخته شوند.", color = Tx.Muted, fontSize = 12.sp) }
             return@Page

@@ -79,6 +79,7 @@ fun WeeklyPlanScreen(nav: NavController, openToday: Boolean = false) {
     val net = profit - loss
 
     Page(title = "برنامه هفتگی", onBack = { nav.popBackStack() }) {
+        SectionHero("WEEKLY MISSION / PLANNER", "ماموریت هفتگی", "هدف‌ها، عادت‌ها و مرور پایان هفته را در یک برنامه قابل پیگیری جمع کن.", Tx.Gold)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
