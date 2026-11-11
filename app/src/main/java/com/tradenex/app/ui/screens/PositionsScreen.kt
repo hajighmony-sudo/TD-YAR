@@ -47,6 +47,7 @@ fun PositionsScreen(nav: NavController) {
     var deleteTarget by remember { mutableStateOf<JournalPosition?>(null) }
 
     Page(title = "پوزیشن‌های باز و خروج جزئی", onBack = { nav.popBackStack() }) {
+        SectionHero("POSITION TRACKER / JOURNAL", "ردیاب پوزیشن‌ها", "ورودها، خروج‌های مرحله‌ای و وضعیت ثبت‌شده هر پوزیشن را برای ژورنال خودت مدیریت کن.", Tx.Blue)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
