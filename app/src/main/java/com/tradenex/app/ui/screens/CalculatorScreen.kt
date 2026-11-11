@@ -60,6 +60,7 @@ fun CalculatorScreen(nav: NavController) {
     val lot = if (riskCash != null && stopPips != null && pv != null && stopPips > 0.0 && pv > 0.0) riskCash / (stopPips * pv) else null
 
     Page(title = "ماشین حساب", onBack = { nav.popBackStack() }) {
+        SectionHero("CALCULATION DECK / TOOLS", "میز ابزار محاسباتی", "محاسبات عمومی، حجم، ریسک و تبدیل USDT را با ورودی‌های قابل‌کنترل انجام بده.", Tx.Blue)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
             TxChip("فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
