@@ -123,6 +123,7 @@ fun TradesScreen(nav: NavController) {
     val losses = shown.count { it.pnl < 0 }
 
     Page(title = "ژورنال معاملات", onBack = { nav.popBackStack() }) {
+        SectionHero("TRADE JOURNAL / HISTORY", "مرکز فرمان معاملات", "معاملات را جست‌وجو، فیلتر، ویرایش و به‌صورت CSV وارد یا صادر کن.", Tx.Green)
         TxField(search, { search = it }, "جست‌وجوی نماد، نام، استراتژی یا یادداشت")
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("همه", "۷ روز", "۳۰ روز", "۹۰ روز").forEach { TxChip(it, range == it, { range = it }) }
