@@ -4,6 +4,8 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,21 +50,23 @@ private fun newToken(): String {
 @Composable
 fun MetaTraderScreen(nav: NavController) {
     val context = LocalContext.current
-    var tab by remember { mutableStateOf(0) }
+    var tab by remember { mutableStateOf(3) }
     val account = AppState.selectedAccount
 
     Page(title = "متاترید", onBack = { nav.popBackStack() }) {
         Reveal(0) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TxChip("پل مستقیم", tab == 0, { tab = 0 }, Modifier.weight(1f))
-                TxChip("گزارش MT4/MT5", tab == 1, { tab = 1 }, Modifier.weight(1f))
-                TxChip("MetaApi", tab == 2, { tab = 2 }, Modifier.weight(1f))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TxChip("ورود با حساب", tab == 3, { tab = 3 })
+                TxChip("پل مستقیم", tab == 0, { tab = 0 })
+                TxChip("گزارش MT4/MT5", tab == 1, { tab = 1 })
+                TxChip("MetaApi", tab == 2, { tab = 2 })
             }
             Text("معامله‌ها به حساب فعال «${account.name}» اضافه می‌شوند و با شماره‌ی تیکت تکراری ثبت نمی‌شوند.", color = Tx.Muted, fontSize = 11.sp)
         }
         when (tab) {
             0 -> BridgeTab(context)
             1 -> StatementTab(context)
+            3 -> LoginTab(context)
             else -> MetaApiTab(context)
         }
     }
@@ -193,6 +197,56 @@ private fun MetaApiTab(context: Context) {
                         busy = false
                         result = r.fold(
                             { deals -> MetaTrader.importDeals(deals).let { "${it.added} معامله وارد شد، ${it.duplicates} تکراری (از ${deals.size} معامله‌ی بسته‌شده)" } },
+                            { "خطا: ${it.message}" },
+                        )
+                    }
+                }
+                if (result.isNotBlank()) Text(result, color = Tx.Gold, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoginTab(context: Context) {
+    val p = remember { prefs(context) }
+    var apiToken by remember { mutableStateOf(p.getString("api_token", "") ?: "") }
+    var login by remember { mutableStateOf(p.getString("mt_login", "") ?: "") }
+    var server by remember { mutableStateOf(p.getString("mt_server", "") ?: "") }
+    var password by remember { mutableStateOf("") }
+    var mt5 by remember { mutableStateOf(p.getBoolean("mt_is5", true)) }
+    var busy by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    Reveal(1) {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("ورود با نام کاربری و رمز", "از طریق MetaApi")
+                Text("شمارهٔ حساب، رمز و سرور بروکر را وارد کن؛ حساب در MetaApi ثبت و وصل می‌شود و بعد معامله‌ها همین‌جا وارد می‌شوند. متاتریدر پروتکل بازی برای اتصال مستقیم برنامه‌ی ثالث ندارد، پس این اتصال از یک سرویس ابری رد می‌شود.", color = Tx.Muted, fontSize = 11.sp)
+                Text("هشدار امنیتی: فقط «رمز سرمایه‌گذار (Investor / فقط‌خواندنی)» را بگذار، نه رمز معاملاتی. رمز به MetaApi فرستاده می‌شود و روی گوشی ذخیره نمی‌شود.", color = Tx.Red, fontSize = 11.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TxChip("MT5", mt5, { mt5 = true }); TxChip("MT4", !mt5, { mt5 = false })
+                }
+                TxField(apiToken, { apiToken = it }, "توکن MetaApi")
+                TxField(login, { login = it }, "شمارهٔ حساب (Login)")
+                TxField(password, { password = it }, "رمز سرمایه‌گذار (Investor)")
+                TxField(server, { server = it }, "سرور بروکر (مثلاً Broker-Live)")
+                GoldButton(if (busy) "در حال اتصال…" else "اتصال و دریافت معامله‌ها", Modifier.fillMaxWidth()) {
+                    if (busy) return@GoldButton
+                    p.edit().putString("api_token", apiToken).putString("mt_login", login).putString("mt_server", server).putBoolean("mt_is5", mt5).apply()
+                    busy = true; result = ""
+                    scope.launch {
+                        val r = withContext(Dispatchers.IO) {
+                            runCatching {
+                                val id = MetaTrader.connectWithLogin(apiToken, "TRADIX $login", login, password, server, mt5)
+                                p.edit().putString("api_account", id).apply()
+                                id to MetaTrader.accountStatus(apiToken, id)
+                            }
+                        }
+                        busy = false
+                        result = r.fold(
+                            { "حساب ثبت شد (${it.second}). چند دقیقه صبر کن تا وصل شود، بعد در تب MetaApi «دریافت معامله‌ها» را بزن." },
                             { "خطا: ${it.message}" },
                         )
                     }

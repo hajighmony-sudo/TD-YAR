@@ -175,6 +175,43 @@ object MetaTrader {
         }
     }
 
+    // ---------- login-based connection (MetaApi provisioning) ----------
+
+    private const val PROVISION = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai"
+
+    private fun call(method: String, url: String, token: String, body: String? = null): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.requestMethod = method
+        c.connectTimeout = 15000; c.readTimeout = 60000
+        c.setRequestProperty("auth-token", token.trim())
+        c.setRequestProperty("Accept", "application/json")
+        if (body != null) { c.doOutput = true; c.setRequestProperty("Content-Type", "application/json"); c.outputStream.use { it.write(body.toByteArray()) } }
+        try {
+            val code = c.responseCode
+            val text = (if (code in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.readText().orEmpty()
+            if (code !in 200..299) error("MetaApi پاسخ $code داد. ${text.take(220)}")
+            return text
+        } finally { c.disconnect() }
+    }
+
+    /** Registers the MT4/MT5 account (login + password + broker server) with MetaApi and starts it. Returns the MetaApi account id. Use the INVESTOR (read-only) password. */
+    fun connectWithLogin(apiToken: String, name: String, login: String, password: String, server: String, mt5: Boolean): String {
+        require(apiToken.isNotBlank() && login.isNotBlank() && password.isNotBlank() && server.isNotBlank()) { "همهٔ فیلدها را پر کن." }
+        val body = JSONObject()
+            .put("name", name.ifBlank { "TRADIX $login" }).put("type", "cloud-g2").put("login", login.trim())
+            .put("password", password).put("server", server.trim()).put("platform", if (mt5) "mt5" else "mt4").put("magic", 0)
+            .toString()
+        val id = JSONObject(call("POST", "$PROVISION/users/current/accounts", apiToken, body)).getString("id")
+        runCatching { call("POST", "$PROVISION/users/current/accounts/$id/deploy", apiToken) }
+        return id
+    }
+
+    /** "state / connectionStatus" of a MetaApi account, e.g. "DEPLOYED / CONNECTED". */
+    fun accountStatus(apiToken: String, accountId: String): String {
+        val o = JSONObject(call("GET", "$PROVISION/users/current/accounts/${accountId.trim()}", apiToken))
+        return o.optString("state") + " / " + o.optString("connectionStatus")
+    }
+
     fun parseMetaApiDeals(arr: JSONArray): List<Deal> {
         val out = ArrayList<Deal>()
         for (i in 0 until arr.length()) {

@@ -63,8 +63,11 @@ fun CalculatorScreen(nav: NavController) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
             TxChip("ماشین حساب فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
+            TxChip("تتر", mode == 2, { mode = 2 }, Modifier.weight(1f))
         }
-        if (mode == 0) {
+        if (mode == 2) {
+            TetherCalc()
+        } else if (mode == 0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(expression.ifBlank { "محاسبهٔ سریع" }, color = Tx.Muted, fontSize = 12.sp)
