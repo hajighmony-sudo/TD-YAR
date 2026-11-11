@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -96,12 +98,13 @@ fun Reveal(index: Int, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun TxField(value: String, onValue: (String) -> Unit, hint: String, modifier: Modifier = Modifier) {
+fun TxField(value: String, onValue: (String) -> Unit, hint: String, modifier: Modifier = Modifier, secure: Boolean = false) {
     val shape = RoundedCornerShape(13.dp)
     BasicTextField(
         value = value,
         onValueChange = onValue,
         singleLine = true,
+        visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
         textStyle = TextStyle(color = Tx.Text, fontSize = 14.sp),
         cursorBrush = SolidColor(Tx.Gold),
         modifier = modifier,
