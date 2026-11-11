@@ -205,7 +205,8 @@ private fun StatementTab(context: Context) {
 @Composable
 private fun MetaApiTab(context: Context) {
     val p = remember { prefs(context) }
-    var token by remember { mutableStateOf(p.getString("api_token", "") ?: "") }
+    var token by remember { mutableStateOf("") }
+    remember { p.edit().remove("api_token").apply(); Unit }
     var accountId by remember { mutableStateOf(p.getString("api_account", "") ?: "") }
     var region by remember { mutableStateOf(p.getString("api_region", "new-york") ?: "new-york") }
     var days by remember { mutableStateOf(1) }
@@ -219,7 +220,7 @@ private fun MetaApiTab(context: Context) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionTitle("اتصال ابری MetaApi", "سرویس شخص ثالث")
                 Text("این مسیر از توکن API و شناسه‌ی حساب MetaApi استفاده می‌کند؛ این توکن با رمز اصلی ورود به متاتریدر فرق دارد. اطلاعات ورود حساب متاتریدر را در این صفحه وارد نکن. MetaApi سرویس شخص ثالث است و ممکن است هزینه یا محدودیت داشته باشد.", color = Tx.Muted, fontSize = 11.sp)
-                TxField(token, { token = it }, "توکن API")
+                TxField(token, { token = it }, "توکن API MetaApi", secure = true)
                 TxField(accountId, { accountId = it }, "شناسه‌ی حساب (Account ID)")
                 TxField(region, { region = it }, "منطقه (مثلاً new-york یا london)")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -227,7 +228,7 @@ private fun MetaApiTab(context: Context) {
                 }
                 GoldButton(if (busy) "در حال دریافت…" else "دریافت معامله‌ها", Modifier.fillMaxWidth()) {
                     if (busy) return@GoldButton
-                    p.edit().putString("api_token", token).putString("api_account", accountId).putString("api_region", region).apply()
+                    p.edit().putString("api_account", accountId).putString("api_region", region).apply()
                     busy = true; result = ""
                     scope.launch {
                         val now = System.currentTimeMillis()
