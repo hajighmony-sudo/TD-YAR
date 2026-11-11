@@ -263,6 +263,23 @@ fun CalendarScreen(nav: NavController) {
                     }
                 }
             }
+            run {
+                val nowMs = System.currentTimeMillis()
+                val next = newsEvents.filter { it.impact == 2 && it.timestampMillis > nowMs }.minByOrNull { it.timestampMillis }
+                if (next != null) {
+                    val mins = ((next.timestampMillis - nowMs) / 60000).toInt()
+                    val txt = if (mins >= 60) "${mins / 60} ساعت و ${mins % 60} دقیقه" else "$mins دقیقه"
+                    Reveal(2) {
+                        GlassCard(Modifier.fillMaxWidth(), border = Tx.Red.copy(alpha = 0.5f)) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("خبر مهم بعدی (${next.currency})", color = Tx.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(next.title, color = Tx.Text, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("$txt دیگر · قبل از آن معامله‌ی تازه باز نکن یا ریسک را کم کن", color = Tx.Muted, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
             Reveal(2) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     listOf("همه", "High", "USD", "EUR", "GBP", "JPY").forEachIndexed { i, label ->

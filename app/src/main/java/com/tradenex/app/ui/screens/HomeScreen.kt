@@ -1,5 +1,7 @@
 package com.tradenex.app.ui.screens
 
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -310,13 +312,17 @@ private fun RoundBtn(icon: ImageVector, desc: String, onClick: () -> Unit) {
 @Composable
 private fun Quick(label: String, icon: ImageVector, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, tween(120), label = "quick")
     Column(
         modifier
             .height(58.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Tx.Gold.copy(alpha = 0.3f), shape)
-            .clickable(onClick = onClick),
+            .background(Brush.verticalGradient(listOf(Tx.Gold.copy(alpha = if (pressed) 0.22f else 0.10f), Color.White.copy(alpha = 0.03f))))
+            .border(1.dp, Tx.Gold.copy(alpha = if (pressed) 0.8f else 0.3f), shape)
+            .clickable(interactionSource = source, indication = null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

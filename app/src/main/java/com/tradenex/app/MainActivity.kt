@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             TradenexTheme {
-                AppNav(startDestination = if (intent?.data?.host == "weekly_reminder") "weekly_reminder" else "home")
+                AppNav(startDestination = intent?.data?.host?.takeIf { it in setOf("weekly_reminder", "add", "insights", "calendar", "risk_lab", "metatrader", "calculator") } ?: "home")
             }
         }
     }

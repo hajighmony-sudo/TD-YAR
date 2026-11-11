@@ -78,10 +78,24 @@ class DailyReviewWorker(context: Context, params: WorkerParameters) : Worker(con
             .setContentText("وارد TRADIX شو و دلیل نداشتن معامله را در برنامه هفتگی ثبت کن.")
             .setStyle(NotificationCompat.BigTextStyle().bigText("اگر بازار ستاپ مناسبی نداشت یا تصمیم گرفتی معامله نکنی، دلیلش را ثبت کن تا گزارش هفتگی دقیق‌تری داشته باشی."))
             .setContentIntent(intent)
+            .setColor(0xFFD4AF37.toInt())
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .addAction(0, "ثبت معامله", deepLink(1202, "add"))
+            .addAction(0, "بدون معامله؛ ثبت دلیل", deepLink(1203, "weekly_reminder"))
+            .addAction(0, "بینش‌ها", deepLink(1204, "insights"))
             .setAutoCancel(true)
             .build()
         manager.notify(todayNotificationId(), notification)
     }
+
+    private fun deepLink(code: Int, host: String): PendingIntent = PendingIntent.getActivity(
+        applicationContext, code,
+        Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            data = android.net.Uri.parse("tradix://$host")
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     private fun todayNotificationId() = LocalDate.now().dayOfYear + 7000
 }
