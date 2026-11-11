@@ -62,7 +62,8 @@ fun CalculatorScreen(nav: NavController) {
     Page(title = "ماشین حساب", onBack = { nav.popBackStack() }) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
-            TxChip("ماشین حساب فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
+            TxChip("فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
+            TxChip("تتر USDT", mode == 2, { mode = 2 }, Modifier.weight(1f))
         }
         if (mode == 0) {
             GlassCard(Modifier.fillMaxWidth()) {
@@ -117,7 +118,7 @@ fun CalculatorScreen(nav: NavController) {
                     }
                 }
             }
-        } else {
+        } else if (mode == 1) {
             var forexTab by remember { mutableStateOf(0) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TxChip("حجم لات", forexTab == 0, { forexTab = 0 }, Modifier.weight(1f))
@@ -150,8 +151,66 @@ fun CalculatorScreen(nav: NavController) {
                     Text("برای نمادهای فلزات، شاخص‌ها، کریپتو و حساب‌های غیر USD، اندازه قرارداد و تبدیل ارز بروکر را جداگانه بررسی کن؛ مقدار pip value را از مشخصات همان نماد وارد کن.", color = Tx.Muted, fontSize = 10.sp)
                 }
             }
+        } else {
+            TetherCalculator()
         }
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun TetherCalculator() {
+    var direction by remember { mutableStateOf(0) }
+    var rate by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("100") }
+    var fee by remember { mutableStateOf("0") }
+    val r = number(rate)
+    val a = number(amount)
+    val f = number(fee)
+    val valid = r != null && r > 0.0 && a != null && a >= 0.0 && f != null && f in 0.0..100.0
+    val gross = if (valid) {
+        if (direction == 0) a!! * r!! else a!! / r!!
+    } else null
+    val feeValue = if (gross != null) gross * f!! / 100.0 else null
+    val net = if (gross != null && feeValue != null) gross - feeValue else null
+    val unit = if (direction == 0) "تومان" else "USDT"
+
+    GlassCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("USDT CONVERTER  /  TRADIX", color = Tx.Gold, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("ماشین حساب تتر", color = Tx.Text, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("تبدیل سریع تتر و تومان با نرخ دلخواه", color = Tx.Muted, fontSize = 11.sp)
+                }
+                Text("₮", color = Tx.Gold, fontSize = 34.sp, fontWeight = FontWeight.Black)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                TxChip("تتر ← تومان", direction == 0, { direction = 0 }, Modifier.weight(1f))
+                TxChip("تومان ← تتر", direction == 1, { direction = 1 }, Modifier.weight(1f))
+            }
+            TxField(rate, { rate = it }, "نرخ هر ۱ تتر به تومان")
+            TxField(amount, { amount = it }, if (direction == 0) "مقدار تتر (USDT)" else "مبلغ تومان")
+            TxField(fee, { fee = it }, "کارمزد فرضی (%)")
+            Text("مقدارهای سریع", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                (if (direction == 0) listOf("10", "50", "100", "500") else listOf("1000000", "5000000", "10000000"))
+                    .forEach { quick -> TxChip(quick, amount == quick, { amount = quick }) }
+            }
+            GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
+                Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("خروجی محاسبه", color = Tx.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (valid) fmt(net ?: 0.0) else "نرخ و مقدار معتبر وارد کن", color = Tx.Text, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(unit, color = Tx.Muted, fontSize = 11.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ResultCell("مبلغ قبل از کارمزد", gross?.let(::fmt) ?: "—", Modifier.weight(1f))
+                        ResultCell("کارمزد فرضی", feeValue?.let(::fmt) ?: "—", Modifier.weight(1f), Tx.Red)
+                    }
+                }
+            }
+            Text("نرخ را دستی وارد کن و پیش از استفاده، زمان به‌روزرسانی و اختلاف نرخ منابع مختلف را بررسی کن. این ابزار فقط تبدیل عددی انجام می‌دهد و نرخ زنده یا پیشنهاد خریدوفروش ارائه نمی‌کند.", color = Tx.Muted, fontSize = 10.sp)
+            Text("الهام از نمایش قیمت، تغییرات و مبدل‌های تتر در منابع معرفی‌شده؛ بدون کپی‌کردن رابط یا داده‌ی آن‌ها.", color = Tx.Muted, fontSize = 10.sp)
+        }
     }
 }
 
