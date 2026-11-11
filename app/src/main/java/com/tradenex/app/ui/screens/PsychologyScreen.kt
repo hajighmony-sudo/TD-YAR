@@ -49,6 +49,7 @@ fun PsychologyScreen(nav: NavController) {
         }.sortedByDescending { it.first.third }
 
     Page(title = "روان‌شناسی معامله‌گری", onBack = { nav.popBackStack() }) {
+        SectionHero("MINDSET / PERFORMANCE", "اتاق فرمان ذهنی", "تمرکز، احساسات و پایبندی به برنامه را برای مرور شخصی ثبت کن.", Tx.Purple)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
