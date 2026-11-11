@@ -169,6 +169,7 @@ fun EducationScreen(nav: NavController) {
     }
 
     Page(title = "آموزش و دانش", onBack = { nav.popBackStack() }) {
+        SectionHero("KNOWLEDGE BASE / ACADEMY", "آکادمی شخصی تو", "درس‌ها، متن‌ها، تصویرها، ویدیوها و فایل‌های آموزشی را دسته‌بندی و مرور کن.", Tx.Purple)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
