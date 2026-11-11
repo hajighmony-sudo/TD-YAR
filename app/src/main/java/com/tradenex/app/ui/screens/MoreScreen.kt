@@ -120,6 +120,7 @@ fun MoreScreen(nav: NavController) {
     )
 
     Page(title = "بیشتر") {
+        SectionHero("TRADIX / WORKSPACE", "فضای کاری اختصاصی تو", "تمام ابزارها، گزارش‌ها و تنظیمات حرفه‌ای از یک مرکز دسترسی.", Tx.Gold)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(14.dp).clickable { profileOpen = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
