@@ -21,6 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -164,6 +167,7 @@ fun CalculatorScreen(nav: NavController) {
 
 @Composable
 private fun TetherCalculator() {
+    val context = LocalContext.current
     var direction by remember { mutableStateOf(0) }
     var rate by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("100") }
@@ -196,6 +200,16 @@ private fun TetherCalculator() {
             TxField(rate, { rate = it }, "نرخ هر ۱ تتر به تومان")
             TxField(amount, { amount = it }, if (direction == 0) "مقدار تتر (USDT)" else "مبلغ تومان")
             TxField(fee, { fee = it }, "کارمزد فرضی (%)")
+            Text("منابع بررسی نرخ", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                TxChip("ارزدیجیتال", false, {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://arzdigital.com/coins/tether/")))
+                })
+                TxChip("تبدیل", false, {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tabdeal.org/usdt-price")))
+                })
+            }
+            Text("نرخ را از منبع دلخواه بررسی کن و در کادر بالا وارد کن.", color = Tx.Muted, fontSize = 10.sp)
             Text("مقدارهای سریع", color = Tx.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (if (direction == 0) listOf("10", "50", "100", "500") else listOf("1000000", "5000000", "10000000"))
