@@ -70,6 +70,7 @@ fun SessionsScreen(nav: NavController) {
             }
         },
     ) {
+        SectionHero("GLOBAL MARKETS / LIVE CLOCK", "نبض بازارهای جهانی", "وضعیت باز و بسته بودن سشن‌ها، هم‌پوشانی‌ها و زمان محلی بازارها را دنبال کن.", Tx.Blue)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
                 if (settings.showGlobe) {
