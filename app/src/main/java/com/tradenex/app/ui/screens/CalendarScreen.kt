@@ -391,7 +391,11 @@ fun CalendarScreen(nav: NavController) {
                                         "یادآور",
                                         tint = if (hasReminder) Tx.Gold else Tx.Muted,
                                         modifier = Modifier.size(22.dp).clickable {
-                                            remind = if (hasReminder) remind - event.id else remind + event.id
+                                            val ok = com.tradenex.app.reminders.ReminderScheduler.scheduleNews(
+                                                context, event.id, event.title, event.currency, event.timestampMillis, !hasReminder,
+                                            )
+                                            if (ok) remind = if (hasReminder) remind - event.id else remind + event.id
+                                            else android.widget.Toast.makeText(context, "زمان این خبر (منهای ۱۵ دقیقه) گذشته است.", android.widget.Toast.LENGTH_SHORT).show()
                                         },
                                     )
                                 }

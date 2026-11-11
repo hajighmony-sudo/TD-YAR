@@ -64,8 +64,11 @@ fun CalculatorScreen(nav: NavController) {
             TxChip("معمولی", mode == 0, { mode = 0 }, Modifier.weight(1f))
             TxChip("ماشین حساب فارکس", mode == 1, { mode = 1 }, Modifier.weight(1f))
             TxChip("تتر", mode == 2, { mode = 2 }, Modifier.weight(1f))
+            TxChip("رشد", mode == 3, { mode = 3 }, Modifier.weight(1f))
         }
-        if (mode == 2) {
+        if (mode == 3) {
+            GrowthCalc()
+        } else if (mode == 2) {
             TetherCalc()
         } else if (mode == 0) {
             GlassCard(Modifier.fillMaxWidth()) {
