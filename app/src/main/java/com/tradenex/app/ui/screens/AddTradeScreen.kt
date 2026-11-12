@@ -150,6 +150,8 @@ fun AddTradeScreen(nav: NavController) {
     val exceedsTradeCount = existingToday.size >= settings.maxTradesPerDay
 
     Page(title = "ثبت معامله", onBack = { nav.popBackStack() }) {
+        SectionHero("TRADE ENTRY / JOURNAL", "ثبت معامله", "ثبت دقیق معامله، جزئیات اجرا و نتیجه را در یک جریان منظم ثبت کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("TRADE DESK / ENTRY", "ثبت دقیق، مرور هوشمند", "جزئیات معامله، ریسک برنامه‌ریزی‌شده، شرایط بازار و ژورنال شخصی را یک‌جا ثبت کن.")
         if (AppState.accounts.none { !it.archived }) {
             GlassCard(Modifier.fillMaxWidth(), border = Tx.Gold.copy(alpha = 0.45f)) {
