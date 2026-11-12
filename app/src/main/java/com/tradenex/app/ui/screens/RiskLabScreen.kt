@@ -54,6 +54,8 @@ fun RiskLabScreen(nav: NavController) {
     val horizons = listOf(50, 100, 250)
 
     Page(title = "آزمایشگاه ریسک", onBack = { nav.popBackStack() }) {
+        SectionHero("RISK LAB / CONTROL", "آزمایشگاه مدیریت ریسک", "حدود ریسک ثبت‌شده و رفتار معاملاتی خودت را پایش کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("RISK LAB / SIMULATION", "آزمایشگاه مدیریت ریسک", "سناریوها و آمار تاریخی را برای شناخت بهتر نوسان و افت سرمایه بررسی کن؛ نه پیش‌بینی بازار.", Tx.Red)
         val todayTrades = trades.filter { it.epochDay == AppState.today() }
         val todayNet = todayTrades.sumOf { it.pnl }
