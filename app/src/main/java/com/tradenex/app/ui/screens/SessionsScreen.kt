@@ -70,6 +70,8 @@ fun SessionsScreen(nav: NavController) {
             }
         },
     ) {
+        SectionHero("MARKET CLOCK / SESSIONS", "نقشه زنده سشن‌های بازار", "وضعیت بازارها، هم‌پوشانی‌ها و ساعت‌های فعال را یکجا دنبال کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("GLOBAL MARKETS / LIVE CLOCK", "نبض بازارهای جهانی", "وضعیت باز و بسته بودن سشن‌ها، هم‌پوشانی‌ها و زمان محلی بازارها را دنبال کن.", Tx.Blue)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
