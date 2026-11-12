@@ -125,6 +125,7 @@ select{font-size:2.2vmin;padding:.8vmin;background:#111;color:var(--t);border:1p
 <script>
 var PIN="",D=null;
 function go(){PIN=document.getElementById('p').value;load(true)}
+var qp=new URLSearchParams(location.search).get('pin');if(qp){PIN=qp;load(true)}
 function load(first){fetch('/data.json?pin='+PIN).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){D=j;
  if(first){document.getElementById('pin').style.display='none';document.getElementById('app').style.display='block';
  var s=document.getElementById('acc');s.innerHTML='<option value="">همه حساب‌ها</option>'+j.accounts.map(function(a){return '<option value="'+a.id+'"'+(a.id==j.selected?' selected':'')+'>'+a.name+'</option>'}).join('');setInterval(function(){load(false)},5000)}
