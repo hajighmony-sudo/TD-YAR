@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.TrackChanges
@@ -106,6 +107,7 @@ fun MoreScreen(nav: NavController) {
         MenuItem("استراتژی‌ها", "ثبت، حذف و مقایسه", Icons.Rounded.TrackChanges, "strategies", Tx.Gold),
         MenuItem("تقویم و اخبار", "معاملات + فارکس فکتوری", Icons.Rounded.CalendarMonth, "calendar", Tx.Green),
         MenuItem("ماشین حساب", "محاسبات عمومی، لات و ریسک فارکس", Icons.Rounded.Calculate, "calculator", Tx.Blue),
+        MenuItem("مشترک", "ارسال داده‌ها به تلویزیون اندروید", Icons.Rounded.Cast, "tv_share", Tx.Gold),
         MenuItem("متاترید", "اتصال مستقیم، گزارش و MetaApi", Icons.Rounded.SwapHoriz, "metatrader", Tx.Blue),
         MenuItem("بینش‌ها", "نماد، روز، ساعت، احساس، استریک", Icons.Rounded.Insights, "insights", Tx.Green),
         MenuItem("آزمایشگاه ریسک", "کِلی، مونت‌کارلو، افت سرمایه، R", Icons.Rounded.Science, "risk_lab", Tx.Red),
