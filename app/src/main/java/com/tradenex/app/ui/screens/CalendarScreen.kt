@@ -125,6 +125,8 @@ fun CalendarScreen(nav: NavController) {
     }
 
     Page(title = "تقویم", onBack = { nav.popBackStack() }, trailing = {
+        SectionHero("TRADING CALENDAR / HEATMAP", "تقویم معاملاتی", "روزهای معاملاتی، سود و زیان و یادداشت‌های روزانه را مرور کن.")
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBox(Icons.Rounded.Refresh, "تازه‌سازی اخبار") { if (!newsLoading) refreshCounter++ }
             TxChip("امروز", false, { offset = 0; selectedDate = today })
