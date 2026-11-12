@@ -1,5 +1,7 @@
 package com.tradenex.app.ui.screens
 
+import com.tradenex.app.ui.screens.SectionHero
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -93,6 +95,8 @@ fun PerformanceScreen(nav: NavController) {
     val coreLabel = if (NativeCore.isNative) "Rust" else "Kotlin"
 
     Page(title = "عملکرد من") {
+        SectionHero("PERFORMANCE / ANALYTICS", "اتاق تحلیل عملکرد", "روند نتایج، کیفیت اجرا و آمار دوره‌ای ژورنالت را بررسی کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("PERFORMANCE / ANALYTICS", "داشبورد عملکرد معاملاتی", "روند سود و زیان، نرخ برد، افت سرمایه و الگوهای زمانی را از داده‌های ثبت‌شده بررسی کن.", Tx.Green)
         Reveal(0) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
