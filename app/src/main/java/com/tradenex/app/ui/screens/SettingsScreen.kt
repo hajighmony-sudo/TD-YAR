@@ -80,6 +80,8 @@ fun SettingsScreen(nav: NavController) {
     }
 
     Page(title = "تنظیمات", onBack = { nav.popBackStack() }) {
+        SectionHero("SYSTEM / PREFERENCES", "مرکز کنترل TRADIX", "ظاهر، زبان، منطقه زمانی و تنظیمات تجربه کاربری را شخصی‌سازی کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("CONTROL CENTER / PREFERENCES", "مرکز کنترل TRADIX", "ظاهر، تجربه کاربری، حریم خصوصی و رفتار برنامه را مطابق شیوه کاری خودت تنظیم کن.", Tx.Blue)
         Reveal(0) { ThemesGroup() }
         Reveal(0) {
