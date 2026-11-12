@@ -105,6 +105,8 @@ fun StrategiesScreen(nav: NavController) {
     val n = AppState.visibleTrades.size
 
     Page(title = "استراتژی‌های من", onBack = { nav.popBackStack() }) {
+        SectionHero("STRATEGY LAB / PLAYBOOK", "آزمایشگاه استراتژی", "قوانین، چک‌لیست‌ها، فایل‌ها و نسخه‌های استراتژی‌ها را مدیریت کن.")
+        Spacer(Modifier.height(8.dp))
         SectionHero("PLAYBOOK / STRATEGY LAB", "کتابخانه استراتژی‌های تو", "قوانین، نسخه‌ها، پیوست‌ها و عملکرد تاریخی هر روش را در یک فضای منظم مدیریت کن.", Tx.Purple)
         Reveal(0) {
             GlassCard(Modifier.fillMaxWidth()) {
