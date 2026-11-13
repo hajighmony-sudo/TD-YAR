@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class DayTotalsTest {
-    private fun t(id: Long, day: Long, pnl: Double) = Trade(id = id, symbol = "EURUSD", buy = true, lot = 1.0, pnl = pnl, epochDay = day)
+    private fun t(id: Long, day: Long, pnl: Double) = Trade(id = id, symbol = "EURUSD", buy = true, lot = 1.0, pnl = pnl, strategy = "S", tags = emptyList(), epochDay = day, emotion = "calm")
 
     @Test fun sumsPerDayOldestFirst() {
         val r = DayTotals.lastDays(listOf(t(1, 10, 5.0), t(2, 10, -2.0), t(3, 8, 7.0)), 10, 3)
