@@ -138,6 +138,7 @@ fun HomeScreen(nav: NavController) {
                     }
                 }
             }
+            Reveal(0) { com.tradenex.app.ui.components.TodayHero(visibleTrades) }
             Reveal(0) {
                 GlassCard(Modifier.fillMaxWidth().height(140.dp)) {
                     Canvas(Modifier.fillMaxSize()) {

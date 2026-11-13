@@ -85,6 +85,7 @@ fun AddTradeScreen(nav: NavController) {
     val context = LocalContext.current
     var buy by remember { mutableStateOf(true) }
     var sideChosen by remember { mutableStateOf(false) }
+    var limitConfirmed by remember { mutableStateOf(false) }
     var symbol by remember { mutableStateOf("") }
     var lot by remember { mutableStateOf(settings.defaultLot.coerceAtLeast(0.0)) }
     var lotText by remember { mutableStateOf(if (settings.defaultLot > 0.0) String.format(java.util.Locale.US, "%.2f", settings.defaultLot) else "") }
@@ -398,6 +399,10 @@ fun AddTradeScreen(nav: NavController) {
                     parsedTradeTime == null -> saveMessage = "ساعت معامله معتبر نیست."
                     usePriceCalculation && priceResult == null -> saveMessage = "قیمت ورود، خروج و نرخ تبدیل را کامل و معتبر وارد کن."
                     !usePriceCalculation && (!resultChosen || amount <= 0.0) -> saveMessage = "نوع نتیجه و مبلغ سود یا ضرر را مشخص کن."
+                    com.tradenex.app.ui.components.CandleStyle.limitBreached() && !limitConfirmed -> {
+                        limitConfirmed = true
+                        saveMessage = "حد ضرر امروز پر شده است. اگر مطمئنی، دوباره «ذخیره» را بزن."
+                    }
                     else -> {
                         val saved = runCatching {
                             AppState.addTrade(
