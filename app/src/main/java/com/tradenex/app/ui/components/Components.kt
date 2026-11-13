@@ -77,8 +77,17 @@ fun TxBackground(content: @Composable BoxScope.() -> Unit) {
         label = "shimmer",
     )
     val boost = if (Tx.isGilded) 1.45f else 1f
+    val candleGlow by androidx.compose.animation.animateColorAsState(CandleStyle.resolve(), tween(600), label = "candleGlow")
     Box(Modifier.fillMaxSize().background(Tx.Bg)) {
         Canvas(Modifier.fillMaxSize()) {
+            // soft glow in the colour of today's candle (green / red / gold) behind the bottom bar
+            drawRect(
+                Brush.radialGradient(
+                    listOf(candleGlow.copy(alpha = 0.16f), Color.Transparent),
+                    center = Offset(size.width * (0.2f + 0.4f * a), size.height * 1.02f),
+                    radius = size.width * 0.95f,
+                ),
+            )
             drawRect(
                 Brush.radialGradient(
                     listOf(Tx.Gold.copy(alpha = (0.22f * boost).coerceAtMost(0.6f)), Color.Transparent),
