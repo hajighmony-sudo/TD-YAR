@@ -64,6 +64,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -85,12 +90,31 @@ object CandleStyle {
     val Gold = Color(0xFFF5C451)
 
     var mode by mutableStateOf(CandleMode.Auto)
+    /** Daily profit goal and daily loss limit (0 = off). */
+    var dailyGoal by mutableStateOf(0.0)
+    var dailyLimit by mutableStateOf(0.0)
     private var loaded = false
+
+    fun setGoal(context: Context, v: Double) {
+        dailyGoal = v
+        context.getSharedPreferences("tradix_ui", Context.MODE_PRIVATE).edit().putFloat("daily_goal", v.toFloat()).apply()
+    }
+
+    fun setLimit(context: Context, v: Double) {
+        dailyLimit = v
+        context.getSharedPreferences("tradix_ui", Context.MODE_PRIVATE).edit().putFloat("daily_limit", v.toFloat()).apply()
+    }
+
+    /** True once today's loss has reached the limit the user set. */
+    fun limitBreached(): Boolean = dailyLimit > 0 && todayPnl() <= -dailyLimit
 
     fun load(context: Context) {
         if (loaded) return
         loaded = true
-        val k = context.getSharedPreferences("tradix_ui", Context.MODE_PRIVATE).getString("candle_mode", "auto")
+        val sp = context.getSharedPreferences("tradix_ui", Context.MODE_PRIVATE)
+        dailyGoal = sp.getFloat("daily_goal", 0f).toDouble()
+        dailyLimit = sp.getFloat("daily_limit", 0f).toDouble()
+        val k = sp.getString("candle_mode", "auto")
         mode = CandleMode.values().firstOrNull { it.key == k } ?: CandleMode.Auto
     }
 
@@ -116,8 +140,14 @@ private val moreRoutes = setOf("more", "sessions", "strategies", "calendar", "se
 
 /** Bottom navigation drawn as a horizontal glass candle (body + wicks); the colour follows the day's result or the user's pick. */
 @Composable
-fun CandleNavBar(current: String, onNavigate: (String) -> Unit) {
+fun CandleNavBar(current: String, onNavigateRaw: (String) -> Unit) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val onNavigate: (String) -> Unit = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onNavigateRaw(it) }
+    val breached = CandleStyle.limitBreached()
+    val pulse by rememberInfiniteTransition(label = "limit").animateFloat(0.35f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "p")
+    val borderAlpha = if (breached) pulse else 0.75f
+    val todayNow = CandleStyle.todayPnl()
     LaunchedEffect(Unit) { CandleStyle.load(context) }
     val c by animateColorAsState(CandleStyle.resolve(), tween(450), label = "candle")
     var palette by remember { mutableStateOf(false) }
@@ -147,7 +177,7 @@ fun CandleNavBar(current: String, onNavigate: (String) -> Unit) {
                 .shadow(16.dp, shape, ambientColor = c, spotColor = c)
                 .clip(shape)
                 .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.5f), c.copy(alpha = 0.16f))))
-                .border(1.dp, c.copy(alpha = 0.75f), shape),
+                .border(if (breached) 2.dp else 1.dp, (if (breached) CandleStyle.Red else c).copy(alpha = borderAlpha), shape),
         ) {
             val slotW = maxWidth / 5
             val knobX by animateDpAsState(slotW * (if (selected < 0) 0 else selected), spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow), label = "knob")
@@ -177,6 +207,11 @@ fun CandleNavBar(current: String, onNavigate: (String) -> Unit) {
             }
         }
 
+        // price tag: today's result, like the last-price label on a chart
+        Box(
+            Modifier.align(Alignment.TopStart).clip(RoundedCornerShape(9.dp)).background(c).padding(horizontal = 7.dp, vertical = 2.dp),
+        ) { Text(String.format(java.util.Locale.US, "%+.1f", todayNow), color = Color(0xFF07080D), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
+
         // palette handle
         Box(
             Modifier.align(Alignment.TopEnd).size(24.dp).clip(CircleShape)
@@ -204,7 +239,7 @@ fun CandleNavBar(current: String, onNavigate: (String) -> Unit) {
                             Box(
                                 Modifier.size(46.dp).clip(CircleShape).background(fill)
                                     .border(if (on) 2.dp else 1.dp, if (on) Color.White else Color.White.copy(alpha = 0.2f), CircleShape)
-                                    .clickable { CandleStyle.set(context, m); palette = false },
+                                    .clickable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); CandleStyle.set(context, m); palette = false },
                                 contentAlignment = Alignment.Center,
                             ) { if (m == CandleMode.Auto) Text("A", color = Color(0xFF07080D), fontWeight = FontWeight.ExtraBold) }
                         }
@@ -305,6 +340,8 @@ fun UserDrawer(open: Boolean, onClose: () -> Unit, onNavigate: (String) -> Unit)
                 DrawerStat("$winRate%", "نرخ برد", Color(0xFF8FA2FF), Modifier.weight(1f))
                 DrawerStat(String.format(java.util.Locale.US, "%,.0f", trades.sumOf { it.pnl }), "سود کل", c, Modifier.weight(1f))
             }
+            WeekCandles(c)
+            GoalGuard(c, today)
             items.forEach { item ->
                 Row(
                     Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(16.dp))
@@ -334,4 +371,76 @@ private fun DrawerStat(value: String, label: String, color: Color, modifier: Mod
         Text(value, color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         Text(label, color = Tx.Muted, fontSize = 10.sp)
     }
+}
+
+@Composable
+private fun WeekCandles(accent: Color) {
+    val today = LocalDate.now().toEpochDay()
+    val vals = com.tradenex.app.core.DayTotals.lastDays(AppState.visibleTrades, today, 7)
+    val maxAbs = (vals.maxOfOrNull { kotlin.math.abs(it) } ?: 0.0).coerceAtLeast(1.0)
+    val names = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.05f)).border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("۷ کندل اخیر", color = Tx.Muted, fontSize = 11.sp)
+        Row(Modifier.fillMaxWidth().height(76.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            vals.forEachIndexed { i, v ->
+                val col = if (v > 0) CandleStyle.Green else if (v < 0) CandleStyle.Red else CandleStyle.Gold
+                val h = (8 + kotlin.math.abs(v) / maxAbs * 48).dp
+                val dow = LocalDate.ofEpochDay(today - (6 - i)).dayOfWeek.value // Mon=1..Sun=7
+                val label = names[(dow + 1) % 7]
+                Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+                    Box(Modifier.width(12.dp).height(h).clip(RoundedCornerShape(4.dp)).background(Brush.verticalGradient(listOf(col, col.copy(alpha = 0.5f)))).then(if (i == 6) Modifier.border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(4.dp)) else Modifier))
+                    Spacer(Modifier.height(4.dp))
+                    Text(label, color = if (i == 6) Color.White else Tx.Muted, fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalGuard(accent: Color, today: Double) {
+    val context = LocalContext.current
+    val goal = CandleStyle.dailyGoal
+    val limit = CandleStyle.dailyLimit
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.05f)).border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("هدف و حد ضرر روزانه", color = Tx.Muted, fontSize = 11.sp)
+        if (goal > 0) {
+            val p = (today / goal).coerceIn(0.0, 1.0).toFloat()
+            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.08f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(RoundedCornerShape(4.dp)).background(CandleStyle.Green))
+            }
+            Text(if (today >= goal) "هدف امروز محقق شد" else String.format(java.util.Locale.US, "%.0f از %.0f", today.coerceAtLeast(0.0), goal), color = CandleStyle.Green, fontSize = 11.sp)
+        }
+        if (limit > 0) {
+            val used = (-today / limit).coerceIn(0.0, 1.0).toFloat()
+            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.08f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(used).clip(RoundedCornerShape(4.dp)).background(CandleStyle.Red))
+            }
+            Text(if (CandleStyle.limitBreached()) "حد ضرر امروز پر شد؛ امروز دیگر معامله نکن" else String.format(java.util.Locale.US, "%.0f تا حد ضرر", limit + today.coerceAtMost(0.0)), color = CandleStyle.Red, fontSize = 11.sp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            Text("هدف", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+            listOf(0.0, 50.0, 100.0, 250.0).forEach { v -> MiniChip(if (v == 0.0) "خاموش" else v.toInt().toString(), goal == v) { CandleStyle.setGoal(context, v) } }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            Text("ضرر", color = Tx.Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+            listOf(0.0, 50.0, 100.0, 200.0).forEach { v -> MiniChip(if (v == 0.0) "خاموش" else v.toInt().toString(), limit == v) { CandleStyle.setLimit(context, v) } }
+        }
+    }
+}
+
+@Composable
+private fun MiniChip(text: String, on: Boolean, onClick: () -> Unit) {
+    Text(
+        text, color = if (on) Color(0xFF07080D) else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.clip(RoundedCornerShape(10.dp))
+            .background(if (on) Color.White else Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 5.dp),
+    )
 }
