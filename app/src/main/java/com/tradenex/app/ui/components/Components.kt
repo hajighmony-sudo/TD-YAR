@@ -243,63 +243,8 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun TxBottomBar(current: String, onNavigate: (String) -> Unit) {
-    val moreRoutes = setOf("more", "sessions", "strategies", "calendar", "settings", "tags", "accounts", "trades", "weekly", "weekly_reminder", "calculator", "risk_lab", "metatrader", "tv_share", "insights", "tx_ai", "tx_ai_legacy")
-    val shape = RoundedCornerShape(26.dp)
-    val t = rememberInfiniteTransition(label = "fab")
-    val pulse by t.animateFloat(
-        initialValue = 1f,
-        targetValue = if (AppState.settings.animations >= 2) 1.08f else 1f,
-        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
-        label = "pulse",
-    )
-    Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp).navigationBarsPadding()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(68.dp)
-                .clip(shape)
-                .background(Brush.verticalGradient(listOf(Tx.BarTop, Tx.BarBottom)))
-                .border(1.dp, Tx.Gold.copy(alpha = (Tx.borderAlpha + 0.07f).coerceAtMost(1f)), shape)
-                .then(if (AppState.settings.animations >= 2) Modifier.shimmerBorder(shape, offset = 0.5f) else Modifier),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround,
-        ) {
-            NavBtn("خانه", Icons.Rounded.Home, current == "home") { onNavigate("home") }
-            NavBtn("گزارش‌ها", Icons.Rounded.BarChart, current == "perf") { onNavigate("perf") }
-            Spacer(Modifier.width(64.dp))
-            NavBtn("آموزش", Icons.Rounded.MenuBook, current == "edu") { onNavigate("edu") }
-            NavBtn("بیشتر", Icons.Rounded.GridView, current in moreRoutes) { onNavigate("more") }
-        }
-        Box(
-            Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = (-22).dp)
-                .scale(pulse)
-                .size(58.dp)
-                .shadow(18.dp, CircleShape, ambientColor = Tx.Gold, spotColor = Tx.Gold)
-                .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(Tx.FabCore, Tx.FabEdge)))
-                .border(2.dp, Tx.GoldPale, CircleShape)
-                .clickable { onNavigate("add") },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.Add, "ثبت معامله جدید", tint = Tx.FabIcon, modifier = Modifier.size(30.dp))
-        }
-    }
+    CandleNavBar(current, onNavigate)
 }
-
-@Composable
-private fun NavBtn(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
-    val c by animateColorAsState(if (selected) Tx.Gold else Tx.Muted, label = "nav")
-    Column(
-        Modifier.clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(icon, label, tint = c, modifier = Modifier.size(24.dp))
-        Text(label, color = c, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
 
 /** Shared single-line text input used by settings and forms. */
 @Composable

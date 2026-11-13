@@ -59,9 +59,14 @@ fun AppNav(startDestination: String = "home") {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "home"
 
+    var drawerOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     TxBackground {
+      Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End) {
+            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.material3.IconButton(onClick = { drawerOpen = !drawerOpen }) {
+                    com.tradenex.app.ui.components.HamburgerIcon(drawerOpen)
+                }
                 IconButton(onClick = { nav.navigate("notifications") { launchSingleTop = true } }) {
                     Icon(Icons.Outlined.Notifications, contentDescription = "مرکز اعلان‌ها")
                 }
@@ -123,5 +128,9 @@ fun AppNav(startDestination: String = "home") {
                 }
             }
         }
+        com.tradenex.app.ui.components.UserDrawer(open = drawerOpen, onClose = { drawerOpen = false }) { target ->
+            nav.navigate(target) { launchSingleTop = true }
+        }
+      }
     }
 }
